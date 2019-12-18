@@ -26,7 +26,7 @@ tiresite_vars <- read_excel("MMEdit_Tire_Data_ELC_Updated_Nov20_2019.xlsx", shee
 tire_fulldat <- merge(tire_rawdat, tiresite_vars, by="WayPt_ID")
 
 #Standardize the number of mosquitoes found by the volume of water sampled (mosquitoes per liter) and put it in front
-tire_fulldat <- mutate(tire_fulldat, MosqPerL = MosqCount/water_L) %>% select(MosqPerL, everything())
+tire_fulldat <- mutate(tire_fulldat, MosqPerL = MosqCount/water_L) %>% select(MosqPerL, everything()) %>% select(-c(MosqCount))
 
 #Save the modified data
 write.csv(tire_fulldat, file="TireData121219.csv")

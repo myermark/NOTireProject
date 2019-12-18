@@ -54,10 +54,10 @@ for (n in 1:length(dflist.num)) {
   dev.off()
 }
 
-#Obtain correlated variables (>0.75) to consider for removal 
+#Obtain correlated variables (>0.5) to consider for removal 
 dflist.remove <- list()
 for (n in 1:length(dflist.cor)) {
-dflist.remove[[n]] <- findCorrelation(cor(dplyr::select(dflist.num[[n]], -c(MosqPerL, LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek))), cutoff = 0.75, names = TRUE)
+dflist.remove[[n]] <- findCorrelation(cor(dplyr::select(dflist.num[[n]], -c(MosqPerL, LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek))), cutoff = 0.5, names = TRUE)
 }
 names(dflist.remove) = splist
 
@@ -73,8 +73,23 @@ names(dflist.reduced) = splist
 bvs.list <- list()
 bvs.vars <- list()
 for (n in 1:length(dflist.reduced)) {
-bvs.list[[n]] <- GibbsBvs(MosqPerL ~ . , data = dplyr::select(dflist.reduced[[n]], -c(MosqCount, LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek)))
+bvs.list[[n]] <- GibbsBvs(MosqPerL ~ . , data = dplyr::select(dflist.reduced[[n]], -c(LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, Sampledtire, NSampledTires)), time.test=F)
 bvs.vars[[n]] <- bvs.list[[n]]$inclprob[order(bvs.list[[n]]$inclprob, decreasing=T)]
 }
 names(bvs.list) = splist
 names(bvs.vars) = splist
+
+#Remove the 'y' from the end of dummy-coded factor variables 
+for (n in 1:length(bvs.vars)) {
+  names(bvs.vars[[n]]) <- sub("y$", "", names(bvs.vars[[n]]))
+  names(bvs.vars[[n]]) <- sub("Developed.Medium.Intensit", "Developed.Medium.Intensity", names(bvs.vars[[n]])) #Put the 'y' back on this one. Stupid, I know. 
+}
+
+#Reduce the datasets to the top 5 variables from each list and bind with the spatial/temporal ones held out
+dat.selected <- list()
+for (n in 1:length(bvs.vars)) {
+  dat.selected[[n]] <- cbind(select(dflist[[n]], c(LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, Sampledtire, NSampledTires)), select(dflist[[n]], names(bvs.vars[[n]][1:5])))
+}
+
+names(dat.selected) = splist 
+
