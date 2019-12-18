@@ -90,7 +90,6 @@ dat.selected <- list()
 for (n in 1:length(bvs.vars)) {
   dat.selected[[n]] <- cbind(select(dflist[[n]], c(LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, Sampledtire, NSampledTires)), select(dflist[[n]], names(bvs.vars[[n]][1:5])))
 }
-
 names(dat.selected) = splist 
 
-save(dat.selected, file = ("Mosquito_Variables_Selected.rds"))
+saveRDS(dat.selected, file = "Mosquito_Variables_Selected.rds")
