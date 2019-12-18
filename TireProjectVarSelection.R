@@ -93,3 +93,4 @@ for (n in 1:length(bvs.vars)) {
 
 names(dat.selected) = splist 
 
+save(dat.selected, file = ("Mosquito_Variables_Selected.rds"))
