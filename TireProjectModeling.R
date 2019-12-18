@@ -10,8 +10,4 @@
 # R version 3.6.1 Action of the Toes
 ####---
 
-#Load packages
 
-
-#Import data 
-dat.selected <- readRDS("Mosquito_Variables_Selected.rds")
