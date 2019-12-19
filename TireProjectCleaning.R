@@ -22,11 +22,16 @@ library(tidyr)
 tire_rawdat <- read_excel("MMEdit_Tire_Data_ELC_Updated_Nov20_2019.xlsx") %>% mutate(MosqCount = as.numeric(MosqCount))
 tiresite_vars <- read_excel("MMEdit_Tire_Data_ELC_Updated_Nov20_2019.xlsx", sheet = 3)
 
+#The names of latitude and longitude are reversed. Need to fix. 
+names(tire_rawdat)[which(names(tire_rawdat) == "LongX")] = "Placeholder"
+names(tire_rawdat)[which(names(tire_rawdat) == "LatY")] = "LongX"
+names(tire_rawdat)[which(names(tire_rawdat) == "Placeholder")] = "LatY"
+
 #Match site variables to observations
 tire_fulldat <- merge(tire_rawdat, tiresite_vars, by="WayPt_ID")
 
 #Standardize the number of mosquitoes found by the volume of water sampled (mosquitoes per liter) and put it in front
-tire_fulldat <- mutate(tire_fulldat, MosqPerL = MosqCount/water_L) %>% select(MosqPerL, everything()) %>% select(-c(MosqCount))
+tire_fulldat <- mutate(tire_fulldat, MosqPerL = MosqCount/water_L) %>% dplyr::select(MosqPerL, everything()) %>% dplyr::select(-c(MosqCount))
 
 #Save the modified data
 write.csv(tire_fulldat, file="TireData121219.csv")

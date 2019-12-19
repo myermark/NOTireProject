@@ -49,9 +49,9 @@ names(dflist.cor) = splist
 
 #Create a giant correlogram for each species
 for (n in 1:length(dflist.num)) {
-  tiff(filename=paste0("Figures/",names(dflist.num)[n],"corrplot.tiff"), width = 15, height = 15, units = "in", pointsize = 8, res = 96, compression = "lzw", type = "cairo")
+  #tiff(filename=paste0("Figures/",names(dflist.num)[n],"corrplot.tiff"), width = 15, height = 15, units = "in", pointsize = 8, res = 96, compression = "lzw", type = "cairo")
   corrplot(dflist.cor[[n]], method = "number", tl.cex = 1.75, number.cex = 0.75)
-  dev.off()
+  #dev.off()
 }
 
 #Obtain correlated variables (>0.5) to consider for removal 
@@ -88,7 +88,7 @@ for (n in 1:length(bvs.vars)) {
 #Reduce the datasets to the top 5 variables from each list and bind with the spatial/temporal ones held out
 dat.selected <- list()
 for (n in 1:length(bvs.vars)) {
-  dat.selected[[n]] <- cbind(select(dflist[[n]], c(LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, Sampledtire, NSampledTires)), select(dflist[[n]], names(bvs.vars[[n]][1:5])))
+  dat.selected[[n]] <- cbind(dplyr::select(dflist[[n]], c(LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, Sampledtire, NSampledTires)), dplyr::select(dflist[[n]], names(bvs.vars[[n]][1:5])))
 }
 names(dat.selected) = splist 
 
