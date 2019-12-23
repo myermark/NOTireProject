@@ -28,7 +28,7 @@ border <- spTransform(border, crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_d
 #Visualize using ggmaps
 nola_stamen <- get_stamenmap(bbox = border@bbox, zoom = 11, maptype = "terrain")
 map <- ggmap(nola_stamen)
-loc <- unique(data.frame(long = dat.selected[[1]]$LatY, lat = dat.selected[[1]]$LongX)) #Note that lat and long are reversed in the dataset. 
+loc <- unique(data.frame(long = dat.selected[[1]]$LongX, lat = dat.selected[[1]]$LatY)) 
 map + geom_point(data = loc, pch=21, stroke = 1, aes(x=long, y= lat))  + 
   guides(size = F) +
   labs(x = "Longitude", y = "Latitude") + 
@@ -36,3 +36,10 @@ map + geom_point(data = loc, pch=21, stroke = 1, aes(x=long, y= lat))  +
   theme(axis.title.x = element_text(color = "black", size = 14, face = "bold"),
         axis.title.y = element_text(color = "black", size = 14, face = "bold"), 
         plot.title = element_text(size=20, face = "bold"))
+
+#Check the distribution of responses to determine link function for GLMM (if any)
+lapply(1:length(dat.selected), function(i){
+  hist(dat.selected[[i]]$MosqPerL, main=names(dat.selected)[i], xlab = "Mosquito Larvae Per Liter")
+})
+
+#Define the INLA model 

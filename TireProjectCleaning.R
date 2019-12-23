@@ -27,12 +27,22 @@ names(tire_rawdat)[which(names(tire_rawdat) == "LongX")] = "Placeholder"
 names(tire_rawdat)[which(names(tire_rawdat) == "LatY")] = "LongX"
 names(tire_rawdat)[which(names(tire_rawdat) == "Placeholder")] = "LatY"
 
+names(tire_rawdat)[which(names(tire_rawdat) == "Adj_X")] = "Placeholder"
+names(tire_rawdat)[which(names(tire_rawdat) == "Adj_Y")] = "Adj_X"
+names(tire_rawdat)[which(names(tire_rawdat) == "Placeholder")] = "Adj_Y"
+
 #Match site variables to observations
 tire_fulldat <- merge(tire_rawdat, tiresite_vars, by="WayPt_ID")
 
 #Standardize the number of mosquitoes found by the volume of water sampled (mosquitoes per liter) and put it in front
 tire_fulldat <- mutate(tire_fulldat, MosqPerL = MosqCount/water_L) %>% dplyr::select(MosqPerL, everything()) %>% dplyr::select(-c(MosqCount))
 
+#Convert the locations to a shapefile then reproject to kilometers to make INLA happy
+coordinates(tire_fulldat) <- ~Adj_X + Adj_Y
+proj4string(tire_fulldat) <- crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")
+tire_fulldat <- spTransform(tire_fulldat, crs("+proj=utm +zone=15 +datum=NAD83 +units=km +no_defs +ellps=GRS80 +towgs84=0,0,0"))
+
+tire_fulldat <- data.frame(tire_fulldat)
 #Save the modified data
 write.csv(tire_fulldat, file="TireData121219.csv")
 
