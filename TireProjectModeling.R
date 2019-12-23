@@ -43,3 +43,13 @@ lapply(1:length(dat.selected), function(i){
 })
 
 #Define the INLA model 
+meshes <- lapply(1:length(dat.selected), function (i) {
+  loc <- list()
+  bnd <- list()
+  mesh <- list()
+  loc[[i]] <- cbind(dat.selected[[i]]$Adj_X, dat.selected[[i]]$Adj_Y) 
+  bnd[[i]] <-inla.nonconvex.hull(loc[[i]]) #Makes a nonconvex hull around the points
+  mesh[[i]] <-inla.mesh.2d(boundary=bnd[[i]], cutoff=1, max.edge=c(2,4))
+  return(mesh[[i]])
+  }
+)
