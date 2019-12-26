@@ -43,6 +43,10 @@ proj4string(tire_fulldat) <- crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_de
 tire_fulldat <- spTransform(tire_fulldat, crs("+proj=utm +zone=15 +datum=NAD83 +units=km +no_defs +ellps=GRS80 +towgs84=0,0,0"))
 
 tire_fulldat <- data.frame(tire_fulldat)
+
+#Make epiweek start at 1 for INLA
+tire_fulldat$INLAWeek <- tire_fulldat$EpiWeek - (min(tire_fulldat$EpiWeek) -1)
+
 #Save the modified data
 write.csv(tire_fulldat, file="TireData121219.csv")
 

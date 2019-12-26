@@ -56,7 +56,7 @@ for (n in 1:length(dflist.num)) {
 #Obtain correlated variables (>0.5) to consider for removal 
 dflist.remove <- list()
 for (n in 1:length(dflist.cor)) {
-dflist.remove[[n]] <- findCorrelation(cor(dplyr::select(dflist.num[[n]], -c(MosqPerL, LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek))), cutoff = 0.5, names = TRUE)
+dflist.remove[[n]] <- findCorrelation(cor(dplyr::select(dflist.num[[n]], -c(MosqPerL, LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, INLAWeek))), cutoff = 0.5, names = TRUE)
 }
 names(dflist.remove) = splist
 
@@ -72,7 +72,7 @@ names(dflist.reduced) = splist
 bvs.list <- list()
 bvs.vars <- list()
 for (n in 1:length(dflist.reduced)) {
-bvs.list[[n]] <- GibbsBvs(MosqPerL ~ . , data = dplyr::select(dflist.reduced[[n]], -c(LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, Sampledtire, NSampledTires)), time.test=F)
+bvs.list[[n]] <- GibbsBvs(MosqPerL ~ . , data = dplyr::select(dflist.reduced[[n]], -c(LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, INLAWeek, Sampledtire, NSampledTires)), time.test=F)
 bvs.vars[[n]] <- bvs.list[[n]]$inclprob[order(bvs.list[[n]]$inclprob, decreasing=T)]
 }
 names(bvs.list) = splist
@@ -87,7 +87,7 @@ for (n in 1:length(bvs.vars)) {
 #Reduce the datasets to the top 5 variables from each list and bind with the spatial/temporal ones held out
 dat.selected <- list()
 for (n in 1:length(bvs.vars)) {
-  dat.selected[[n]] <- cbind(dplyr::select(dflist[[n]], c(MosqPerL, LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, Sampledtire, NSampledTires)), dplyr::select(dflist[[n]], names(bvs.vars[[n]][1:5])))
+  dat.selected[[n]] <- cbind(dplyr::select(dflist[[n]], c(MosqPerL, LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, INLAWeek, Sampledtire, NSampledTires)), dplyr::select(dflist[[n]], names(bvs.vars[[n]][1:5])))
 }
 names(dat.selected) = splist 
 
