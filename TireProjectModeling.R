@@ -133,6 +133,7 @@ formulas <- lapply(1:length(dat.selected), function(i) {
                         "+",
                         names(dat.selected[[i]])[len], 
                         "+ f(spatial, model=spdes[[i]])"#, 
+                        #"+ f(WayPt_ID, model = iid), #Random intercept by waypoint site
                         #"+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))"
   )
   return(formula[[i]])

@@ -34,6 +34,9 @@ names(tire_rawdat)[which(names(tire_rawdat) == "Placeholder")] = "Adj_Y"
 #Match site variables to observations
 tire_fulldat <- merge(tire_rawdat, tiresite_vars, by="WayPt_ID")
 
+#Change site variable to just a number ("2" rather than "WP2")
+tire_fulldat <- mutate(tire_fulldat, WayPt_ID = substring(WayPt_ID, 3))
+
 #Standardize the number of mosquitoes found by the volume of water sampled (mosquitoes per liter rounded to the nearest mosquito) and put it in front
 tire_fulldat <- mutate(tire_fulldat, MosqPerL = round(MosqCount/water_L, 0)) %>% dplyr::select(MosqPerL, everything()) %>% dplyr::select(-c(MosqCount))
 
