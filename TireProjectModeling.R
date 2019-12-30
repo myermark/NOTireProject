@@ -40,14 +40,14 @@ map + geom_point(data = loc, pch=21, stroke = 1, aes(x=long, y= lat))  +
 
 #Check the distribution of responses to determine link function for GLMM (if any)
 lapply(1:length(dat.selected), function(i){
-  hist(log(dat.selected[[i]]$MosqPerL + 1), main=names(dat.selected)[i], xlab = "Mosquito Larvae Per Liter")
+  hist(dat.selected[[i]]$MosqPerL, main=names(dat.selected)[i], xlab = "Mosquito Larvae Per Liter")
 })
 
 #Define the model formulas
 nonspatial.formulas <- lapply(1:length(dat.selected), function(i) {
   formula <- list()
   len <- length(dat.selected[[i]])
-  formula[[i]] <- paste("log(MosqPerL + 1) ~ ",
+  formula[[i]] <- paste("MosqPerL ~ ",
                         names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
                         "+",
                         names(dat.selected[[i]])[len-3], 
