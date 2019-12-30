@@ -11,12 +11,15 @@
 ####---
 
 #Load packages
+library(raster)
 library(dplyr)
 library(forcats)
 library(ggplot2)
 library(readr)
 library(readxl)
 library(tidyr)
+library(sp)
+library(rgdal)
 
 #Import data
 tire_rawdat <- read_excel("MMEdit_Tire_Data_ELC_Updated_Nov20_2019.xlsx") %>% mutate(MosqCount = as.numeric(MosqCount))

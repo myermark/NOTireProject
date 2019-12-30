@@ -21,7 +21,7 @@ library(tidyr)
 library(dplyr)
 
 #Import data
-tire_fulldat <- read.csv("TireData121219.csv") %>% dplyr::select(., -c(X, comments, DispX, DispY)) %>% na.omit()
+tire_fulldat <- read.csv("TireData121219.csv") %>% dplyr::select(., -c(X, comments, DispX, DispY, optional)) %>% na.omit()
 
 #Separate dataset into dataframes by species (maybe not necessary)
 splist <- unique(tire_fulldat$MosqSpp)

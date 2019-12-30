@@ -17,6 +17,7 @@ library(sf)
 library(ggmap)
 library(dplyr)
 library(raster)
+library(gstat)
 
 #Import data 
 dat.selected <- readRDS(file = "Mosquito_Variables_Selected.rds")
@@ -69,7 +70,36 @@ nonspatial.results <- lapply(1:length(dat.selected), function (i) {
   }
 )
 names(nonspatial.results) <- splist
+nonspatial.resids <- lapply(1:length(nonspatial.results), function (x) {
+  resid <- list()
+  resid[[x]] <- dat.selected[[x]]$MosqPerL - predict(nonspatial.results[[x]]) 
+  }
+)
+names(nonspatial.resids) <- splist
 #Assess spatial autocorrelation using a variogram
+plot.vario <- function (residuals, Xkm, Ykm, cutoff) {
+  MyData1 <- data.frame(E = residuals, 
+                        Xkm = Xkm, 
+                        Ykm = Ykm)
+  coordinates(MyData1) <- c("Xkm", "Ykm")
+  V = variogram(E ~ 1, data = MyData1, cressie = F, cutoff)
+  return(V)
+}
+
+variograms = list()
+variograms <- lapply(1:length(dat.selected), function(x) {
+    plot.vario(
+      residuals = nonspatial.resids[[x]],
+      Xkm = dat.selected[[x]]$Adj_X,
+      Ykm = dat.selected[[x]]$Adj_Y,
+      cutoff = 10
+    )
+  }
+)
+
+for (i in 1:length(dat.selected)) {
+  print(plot(variograms[[i]], main = names(dat.selected)[[i]], col = 1,))
+}
 
 #Define the INLA model 
 meshes <- lapply(1:length(dat.selected), function (i) {
