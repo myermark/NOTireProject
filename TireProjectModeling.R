@@ -10,7 +10,7 @@
 # R version 3.6.1 Action of the Toes
 ####---
 
-#Load packages
+#Load packages----
 library(INLA)
 library(rgdal)
 library(sf)
@@ -19,9 +19,10 @@ library(dplyr)
 library(raster)
 library(gstat)
 
-#Import data 
+#Import data---- 
 dat.selected <- readRDS(file = "Mosquito_Variables_Selected.rds")
 
+#Visualize data and prepare for modeling----
 #Plot the sampling locations
 border <- readOGR("/Volumes/Mark Drive/NOLA/GIS/New Orleans/CityLimits.shp")
 border <- spTransform(border, crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")) #reproject to decimal degrees in WGS84
@@ -39,11 +40,17 @@ map + geom_point(data = loc, pch=21, stroke = 1, aes(x=long, y= lat))  +
         plot.title = element_text(size=20, face = "bold"))
 
 #Check the distribution of responses to determine link function for GLMM (if any)
+#All responses
 lapply(1:length(dat.selected), function(i){
-  hist(dat.selected[[i]]$MosqPerL, main=names(dat.selected)[i], xlab = "Mosquito Larvae Per Liter")
+  hist(dat.selected[[i]]$MosqPerL, main=paste(names(dat.selected)[i], "All Responses"), xlab = "Mosquito Larvae Per Liter")
+})
+#Zero-excluded
+lapply(1:length(dat.selected), function(i){
+  x = filter(dat.selected[[i]], MosqPerL != 0)
+  hist(x$MosqPerL, main=paste(names(dat.selected)[i], "Zeroes Excluded"), xlab = "Mosquito Larvae Per Liter")
 })
 
-#Define the model formulas
+#Define the nonspatial GLM model formulas
 nonspatial.formulas <- lapply(1:length(dat.selected), function(i) {
   formula <- list()
   len <- length(dat.selected[[i]])
@@ -62,7 +69,7 @@ nonspatial.formulas <- lapply(1:length(dat.selected), function(i) {
 }
 )
 
-#Fit nonspatial GLMM models
+#Fit nonspatial GLM models
 nonspatial.results <- lapply(1:length(dat.selected), function (i) {
   nonspatial.result <- list()
   nonspatial.result[[i]] <- glm(as.formula(nonspatial.formulas[[i]]), data = dat.selected[[i]], family = gaussian)
@@ -70,12 +77,14 @@ nonspatial.results <- lapply(1:length(dat.selected), function (i) {
   }
 )
 names(nonspatial.results) <- splist
-nonspatial.resids <- lapply(1:length(nonspatial.results), function (x) {
+
+nonspatial.resids <- lapply(1:length(nonspatial.results), function (i) {
   resid <- list()
-  resid[[x]] <- dat.selected[[x]]$MosqPerL - predict(nonspatial.results[[x]]) 
+  resid[[i]] <- dat.selected[[i]]$MosqPerL - predict(nonspatial.results[[i]]) 
   }
 )
 names(nonspatial.resids) <- splist
+
 #Assess spatial autocorrelation using a variogram
 plot.vario <- function (residuals, Xkm, Ykm, cutoff) {
   MyData1 <- data.frame(E = residuals, 
@@ -87,11 +96,11 @@ plot.vario <- function (residuals, Xkm, Ykm, cutoff) {
 }
 
 variograms = list()
-variograms <- lapply(1:length(dat.selected), function(x) {
+variograms <- lapply(1:length(dat.selected), function(i) {
     plot.vario(
-      residuals = nonspatial.resids[[x]],
-      Xkm = dat.selected[[x]]$Adj_X,
-      Ykm = dat.selected[[x]]$Adj_Y,
+      residuals = nonspatial.resids[[i]],
+      Xkm = dat.selected[[i]]$Adj_X,
+      Ykm = dat.selected[[i]]$Adj_Y,
       cutoff = 10
     )
   }
@@ -101,14 +110,15 @@ for (i in 1:length(dat.selected)) {
   print(plot(variograms[[i]], main = names(dat.selected)[[i]], col = 1,))
 }
 
-#Define the INLA model 
+#Define the INLA model ----
+#Create mesh
 meshes <- lapply(1:length(dat.selected), function (i) {
   loc <- list()
   bnd <- list()
   mesh <- list()
   loc[[i]] <- cbind(dat.selected[[i]]$Adj_X, dat.selected[[i]]$Adj_Y) 
   bnd[[i]] <-inla.nonconvex.hull(loc[[i]]) #Makes a nonconvex hull around the points
-  mesh[[i]] <-inla.mesh.2d(boundary=bnd[[i]], cutoff=1, max.edge=c(2,4))
+  mesh[[i]] <-inla.mesh.2d(boundary=bnd[[i]], cutoff=0.5, max.edge=c(1,4)) #Max-edge is based on estimated correlation distance from semivariograms
   return(mesh[[i]])
   }
 )
@@ -118,8 +128,8 @@ spdes <- lapply(1:length(meshes), function (i) {
   spde <- list()
   spde[[i]] <- inla.spde2.pcmatern(
   mesh=meshes[[i]], alpha=2, ### mesh and smoothness parameter
-  prior.range=c(10, 0.9), ### P(range<10km)=0.9
-  prior.sigma=c(1, 0.5) ### P(sigma>1)=0.5
+  prior.range=c(1, 0.05), ### P(range<1km)=0.05
+  prior.sigma=c(0.5, 0.05) ### P(sigma>0.5)=0.05
     )
   return(spde[[i]])
   }
@@ -135,24 +145,47 @@ As <- lapply(1:length(meshes), function (i) {
   }
 )
 
-#Create the stack 
-stacks <- lapply(1:length(dat.selected), function (i) {
+#Create the stacks 
+#Binomial stack, where anything that is not zero is coded as 1. Presence/absence.
+stacks.bin <- lapply(1:length(dat.selected), function (i) {
   stack <- list()
   stack[[i]] <- inla.stack(
     tag="Fit",
-    data=list(y=dat.selected[[i]]$MosqPerL),
+    data=list(y=ifelse(dat.selected[[i]]$MosqPerL == 0, 0, 1)),
     A=list(As[[i]],1),
-    effects=list(list(spatial = 1:spdes[[i]]$n.spde), data.frame(dat.selected[[i]]))
+    effects=list(list(spatial = 1:spdes[[i]]$n.spde), data.frame(dat.selected[[i]])
+                 # cbind(dplyr::select(data.frame(dat.selected[[i]]), 1:(ncol(dat.selected[[i]]) - 5)), 
+                 #       (dplyr::select(data.frame(dat.selected[[i]]), (ncol(dat.selected[[i]]) - 4):ncol(dat.selected[[i]])) %>%
+                 #         mutate_if(is.numeric, scale))
+                 #       )
+      )
     )
   return(stack[[i]])
   }
+)
+
+stacks.gam <- lapply(1:length(dat.selected), function (i) {
+  stack <- list()
+  stack[[i]] <- inla.stack(
+    tag="Fit",
+    data=list(y=ifelse(dat.selected[[i]]$MosqPerL == 0, NA, dat.selected[[i]]$MosqPerL)),
+    A=list(As[[i]],1),
+    effects=list(list(spatial = 1:spdes[[i]]$n.spde), data.frame(dat.selected[[i]])
+                 # cbind(dplyr::select(data.frame(dat.selected[[i]]), 1:(ncol(dat.selected[[i]]) - 5)), 
+                 #       (dplyr::select(data.frame(dat.selected[[i]]), (ncol(dat.selected[[i]]) - 4):ncol(dat.selected[[i]])) %>%
+                 #          mutate_if(is.numeric, scale))
+                 # )
+    )
+  )
+  return(stack[[i]])
+}
 )
 
 #Define the INLA formulas
 formulas <- lapply(1:length(dat.selected), function(i) {
   formula <- list()
   len <- length(dat.selected[[i]])
-  formula[[i]] <- paste("y ~ 0 +",
+  formula[[i]] <- paste("y ~ -1 + ",
                         names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
                         "+",
                         names(dat.selected[[i]])[len-3], 
@@ -162,9 +195,9 @@ formulas <- lapply(1:length(dat.selected), function(i) {
                         names(dat.selected[[i]])[len-1], 
                         "+",
                         names(dat.selected[[i]])[len], 
-                        "+ f(spatial, model=spdes[[i]])"#, 
-                        #"+ f(WayPt_ID, model = iid), #Random intercept by waypoint site
-                        #"+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))"
+                        "+ f(spatial, model=spdes[[i]])"#, #Spatial model component
+                        #"+ f(WayPt_ID, model = 'iid')"#, #Random intercept by waypoint site
+                        #"+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
   )
   return(formula[[i]])
 }
@@ -173,86 +206,52 @@ formulas <- lapply(1:length(dat.selected), function(i) {
 #Define prior for precision
 prec.prior <- list(prior='pc.prec', param=c(0.5, 0.5))
 
-#Run the models
-results <- list()
-#Ae. aegypti
-results[[1]]<- inla(as.formula(formulas[[1]]),
-                  family="poisson",
-                  data=inla.stack.data(stacks[[1]]),
-                  control.predictor=list(compute=TRUE, A=inla.stack.A(stacks[[1]]), link = 1), #link = 1 scales the fitted values with the logit link
-                  control.family=list(link='log'),# hyper=list(theta=prec.prior)),
-                  control.inla=list(int.strategy='auto'),
-                  control.compute=list(dic=TRUE,cpo=TRUE),
-                  control.fixed=list(expand.factor.strategy ='inla'),
-                  verbose = F)
-#Ae. albopictus
-results[[2]]<- inla(as.formula(formulas[[2]]),
-                    family="poisson",
-                    data=inla.stack.data(stacks[[2]]),
-                    control.predictor=list(compute=TRUE, A=inla.stack.A(stacks[[2]]), link = 1), #link = 1 scales the fitted values with the logit link
-                    control.family=list(link='log'),# hyper=list(theta=prec.prior)),
-                    control.inla=list(int.strategy='auto'),
-                    control.compute=list(dic=TRUE,cpo=TRUE),
-                    control.fixed=list(expand.factor.strategy ='inla'),
-                    verbose = F)
-#Cx. salinarius
-results[[3]]<- inla(as.formula(formulas[[3]]),
-                    family="poisson",
-                    data=inla.stack.data(stacks[[3]]),
-                    control.predictor=list(compute=TRUE, A=inla.stack.A(stacks[[3]]), link = 1), #link = 1 scales the fitted values with the logit link
-                    control.family=list(link='log'),#, hyper=list(theta=prec.prior)),
-                    control.inla=list(int.strategy='auto'),
-                    control.compute=list(dic=TRUE,cpo=TRUE),
-                    control.fixed=list(expand.factor.strategy ='inla'),
-                    verbose = F)
-#Cx. quinquefasciatus
-results[[4]]<- inla(as.formula(formulas[[4]]),
-                    family="poisson",
-                    data=inla.stack.data(stacks[[4]]),
-                    control.predictor=list(compute=TRUE, A=inla.stack.A(stacks[[4]]), link = 1), #link = 1 scales the fitted values with the logit link
-                    control.family=list(link='log'),# hyper=list(theta=prec.prior)),
-                    control.inla=list(int.strategy='auto'),
-                    control.compute=list(dic=TRUE,cpo=TRUE),
-                    control.fixed=list(expand.factor.strategy ='inla'),
-                    verbose = F)
-#A. crucians
-results[[5]]<- inla(as.formula(formulas[[5]]),
-                    family="poisson",
-                    data=inla.stack.data(stacks[[5]]),
-                    control.predictor=list(compute=TRUE, A=inla.stack.A(stacks[[5]]), link = 1), #link = 1 scales the fitted values with the logit link
-                    control.family=list(link='log'),# hyper=list(theta=prec.prior)),
-                    control.inla=list(int.strategy='auto'),
-                    control.compute=list(dic=TRUE,cpo=TRUE),
-                    control.fixed=list(expand.factor.strategy ='inla'),
-                    verbose = F)
-#Cx. restuans
-results[[6]]<- inla(as.formula(formulas[[6]]),
-                    family="poisson",
-                    data=inla.stack.data(stacks[[6]]),
-                    control.predictor=list(compute=TRUE, A=inla.stack.A(stacks[[6]]), link = 1), #link = 1 scales the fitted values with the logit link
-                    control.family=list(link='log'),#, hyper=list(theta=prec.prior)),
-                    control.inla=list(int.strategy='auto'),
-                    control.compute=list(dic=TRUE,cpo=TRUE),
-                    control.fixed=list(expand.factor.strategy ='inla'),
-                    verbose = F)
-#Cx. nigripalpus
-results[[7]]<- inla(as.formula(formulas[[7]]),
-                    family="poisson",
-                    data=inla.stack.data(stacks[[7]]),
-                    control.predictor=list(compute=TRUE, A=inla.stack.A(stacks[[7]]), link = 1), #link = 1 scales the fitted values with the logit link
-                    control.family=list(link='log'),# hyper=list(theta=prec.prior)),
-                    control.inla=list(int.strategy='auto'),
-                    control.compute=list(dic=TRUE,cpo=TRUE),
-                    control.fixed=list(expand.factor.strategy ='inla'),
-                    verbose = F)
+#Run the binomial part of the models
+results.bin <- lapply(1:length(dat.selected), function (i) {
+  inlas.bin <- list()
+  inlas.bin[[i]] <- inla(as.formula(formulas[[i]]),
+                      family="binomial",
+                      Ntrials = 1,
+                      data=inla.stack.data(stacks.bin[[i]]),
+                      control.predictor=list(compute=TRUE, A=inla.stack.A(stacks.bin[[i]]), link = 1), 
+                      control.inla=list(int.strategy='auto', correct = TRUE, correct.factor = 10),
+                      control.compute=list(dic=TRUE,cpo=TRUE, waic=TRUE,po=TRUE,config=TRUE),
+                      control.fixed=list(expand.factor.strategy ='inla'),
+                      verbose = F)
+  return(inlas.bin[[i]])
+  }
+) 
+names(results.bin) <- splist
 
-names(results) <- splist
+#Run the gamma part of the models
+results.gam <- lapply(1:length(dat.selected), function (i) {
+  inlas.gam <- list()
+  inlas.gam[[i]] <- inla(as.formula(formulas[[i]]),
+                         family="gamma",
+                         data=inla.stack.data(stacks.gam[[i]]),
+                         control.predictor=list(compute=TRUE, A=inla.stack.A(stacks.gam[[i]]), link = 1), 
+                         control.inla=list(int.strategy='auto', correct = TRUE, correct.factor = 10),
+                         control.compute=list(dic=TRUE,cpo=TRUE, waic=TRUE,po=TRUE,config=TRUE),
+                         control.fixed=list(expand.factor.strategy ='inla'),
+                         verbose = F)
+  return(inlas.gam[[i]])
+}
+) 
+names(results.gam) <- splist
 
 #Check the results
-summary(results$`A. aeg`)
-summary(results$`A. albo`)
-summary(results$`Cx. salinarius`)
-summary(results$`Cx. quinq`)
-summary(results$`A. crucians`)
-summary(results$`Cx. restuans`)
-summary(results$`Cx. nigripalpus`)
+summary(results.bin$`A. aeg`)
+summary(results.bin$`A. albo`)
+summary(results.bin$`Cx. salinarius`)
+summary(results.bin$`Cx. quinq`)
+summary(results.bin$`A. crucians`)
+summary(results.bin$`Cx. restuans`)
+summary(results.bin$`Cx. nigripalpus`)
+
+summary(results.gam$`A. aeg`)
+summary(results.gam$`A. albo`)
+summary(results.gam$`Cx. salinarius`)
+summary(results.gam$`Cx. quinq`)
+summary(results.gam$`A. crucians`)
+summary(results.gam$`Cx. restuans`)
+summary(results.gam$`Cx. nigripalpus`)
