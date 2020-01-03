@@ -12,6 +12,7 @@
 
 #Load packages----
 library(INLA)
+library(fields)
 library(rgdal)
 library(sf)
 library(ggmap)
@@ -31,6 +32,16 @@ border <- spTransform(border, crs("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_d
 nola_stamen <- get_stamenmap(bbox = border@bbox, zoom = 11, maptype = "terrain")
 map <- ggmap(nola_stamen)
 loc <- unique(data.frame(long = dat.selected[[1]]$LongX, lat = dat.selected[[1]]$LatY)) 
+
+# Distance between samples
+D <- dist(unique(data.frame(long = dat.selected[[1]]$Adj_X, lat = dat.selected[[1]]$Adj_Y)))
+par(mfrow = c(1,1), mar = c(5,5,2,2), cex.lab = 1.5)
+hist(D, 
+     freq = TRUE,
+     main = "", 
+     xlab = "Distance between sampling locations (km)",
+     ylab = "Frequency")
+
 map + geom_point(data = loc, pch=21, stroke = 1, aes(x=long, y= lat))  + 
   guides(size = F) +
   labs(x = "Longitude", y = "Latitude") + 
@@ -118,7 +129,7 @@ meshes <- lapply(1:length(dat.selected), function (i) {
   mesh <- list()
   loc[[i]] <- cbind(dat.selected[[i]]$Adj_X, dat.selected[[i]]$Adj_Y) 
   bnd[[i]] <-inla.nonconvex.hull(loc[[i]]) #Makes a nonconvex hull around the points
-  mesh[[i]] <-inla.mesh.2d(boundary=bnd[[i]], cutoff=0.5, max.edge=c(1,4)) #Max-edge is based on estimated correlation distance from semivariograms
+  mesh[[i]] <-inla.mesh.2d(boundary=bnd[[i]], cutoff=0.25, max.edge=c(1,4)) #Max-edge is based on estimated correlation distance from semivariograms
   return(mesh[[i]])
   }
 )
@@ -128,7 +139,7 @@ spdes <- lapply(1:length(meshes), function (i) {
   spde <- list()
   spde[[i]] <- inla.spde2.pcmatern(
   mesh=meshes[[i]], alpha=2, ### mesh and smoothness parameter
-  prior.range=c(1, 0.05), ### P(range<1km)=0.05
+  prior.range=c(0.5, 0.05), ### P(range<0.5km)=0.05
   prior.sigma=c(0.5, 0.05) ### P(sigma>0.5)=0.05
     )
   return(spde[[i]])
@@ -231,6 +242,7 @@ results.gam <- lapply(1:length(dat.selected), function (i) {
                          data=inla.stack.data(stacks.gam[[i]]),
                          control.predictor=list(compute=TRUE, A=inla.stack.A(stacks.gam[[i]]), link = 1), 
                          control.inla=list(int.strategy='auto', correct = TRUE, correct.factor = 10),
+                         control.family=list(hyper = list(theta = prec.prior)), 
                          control.compute=list(dic=TRUE,cpo=TRUE, waic=TRUE,po=TRUE,config=TRUE),
                          control.fixed=list(expand.factor.strategy ='inla'),
                          verbose = F)
@@ -255,3 +267,121 @@ summary(results.gam$`Cx. quinq`)
 summary(results.gam$`A. crucians`)
 summary(results.gam$`Cx. restuans`)
 summary(results.gam$`Cx. nigripalpus`)
+
+#Perform model evaluation and validation
+#Plot observed vs. fits for the gamma portion of the model 
+dat.pos <- list()
+for (i in 1:length(dat.selected)) {
+  N <- nrow(dat.selected[[i]])
+  mu <- results.gam[[i]]$summary.fitted.values[1:N, "mean"]
+  r <- results.gam[[i]]$summary.hyperpar[1, "mean"]
+  varY <- mu^2 / r
+  E <- (dat.selected[[i]]$MosqPerL - mu) / (sqrt(varY))
+  
+  dat.selected[[i]]$mu <- mu
+  dat.selected[[i]]$E <- E
+  dat.pos[[i]] <- filter(dat.selected[[i]], MosqPerL > 0)
+  
+  plot(y = dat.pos[[i]]$MosqPerL, 
+       x = dat.pos[[i]]$mu, 
+       xlab = "Fitted values",
+       ylab = "Observed data", 
+       main = names(dat.selected)[i], 
+       xlim = range(dat.selected[[i]]$MosqPerL), 
+       ylim = range(dat.selected[[i]]$MosqPerL))
+}
+
+#Combine the models to get a joint mean and variance
+pis <- lapply(1:length(dat.selected), function (i) {
+  pi = list()
+  N = nrow(dat.selected[[i]])
+  pi[[i]] = results.bin[[i]]$summary.fitted.values[1:N, "mean"]
+  return(pi[[i]])
+  }
+)
+
+mus <- lapply(1:length(dat.selected), function (i) {
+  mu = list()
+  N = nrow(dat.selected[[i]])
+  mu[[i]] = results.gam[[i]]$summary.fitted.values[1:N, "mean"]
+  return(mu[[i]])
+  }
+)
+
+exps_zag <- lapply(1:length(dat.selected), function (i) {
+  exp <- list()
+  exp[[i]] = pis[[i]] * mus[[i]]
+  return(exp[[i]])
+  }
+)
+
+vars_zag <- lapply(1:length(dat.selected), function (i) {
+  var <- list()
+  r <- results.gam[[i]]$summary.hyperpar[1, "mean"]
+  var[[i]] = (mus[[i]] ^ 2) * (pis[[i]] * r + pis[[i]] - pis[[i]]^2 * r) / r
+  return(var[[i]])
+  }
+)
+
+Es_zag <- lapply(1:length(dat.selected), function (i) {
+  E <- list()
+  E[[i]] = as.numeric((dat.selected[[i]]$MosqPerL - exps_zag[[i]]) / sqrt(vars_zag[[i]]))
+  return(E[[i]])
+  }
+)
+
+#Plot the residuals vs the fitted values for each model 
+for(i in 1:length(dat.selected)) {
+  plot(y = Es_zag[[i]], 
+       x = exps_zag[[i]], 
+       xlab = "Fitted data",
+       ylab = "Residuals", 
+       xlim = range(dat.selected[[i]]$MosqPerL),
+       main = names(dat.selected)[i] 
+  )
+}
+
+#Plot the spatial field for Cx. quinquefasciatus
+PlotField2 <- function(field, mesh, ContourMap, xlim, ylim, Add=FALSE, MyMain, ...){
+  stopifnot(length(field) == mesh$n)
+  # Plotting region to be the same as the study area polygon
+  if (missing(xlim)) xlim <- ContourMap@bbox[1, ] 
+  if (missing(ylim)) ylim <- ContourMap@bbox[2, ]
+  
+  # inla.mesh.projector: it creates a lattice using the mesh and specified ranges. 
+  proj <- inla.mesh.projector(mesh, 
+                              xlim = xlim, 
+                              ylim = ylim, 
+                              dims = c(300, 300))
+  # The function inla.mesh.project can then 
+  # be used to project the w's on this grid.
+  field.proj <- inla.mesh.project(proj, field)
+  
+  # And plot the whole thing
+  image.plot(list(x = proj$x, 
+                  y = proj$y,
+                  z = field.proj), 
+             xlim = xlim, 
+             ylim = ylim,
+             asp = 1,
+             add = Add,
+             main = MyMain,
+             axes = FALSE,
+             ...)  
+}
+
+
+par(oma=c( 0,0,0,0), mar = c(4,4,1,1)) # margin of 4 spaces width at right hand side
+w.pm <- results.gam$`Cx. quinq`$summary.random$spatial$mean
+PlotField2(field = w.pm, 
+           mesh = meshes[[4]], 
+           xlim = range(meshes[[4]]$loc[,1]), 
+           ylim = range(meshes[[4]]$loc[,2]),
+           MyMain = "")
+km_loc <- unique(data.frame(long = dat.selected[[4]]$Adj_X, lat = dat.selected[[4]]$Adj_Y))
+points(x = km_loc[,1],
+       y = km_loc[,2], 
+       cex = 0.5, 
+       col = "black", 
+       pch = 16)
+
