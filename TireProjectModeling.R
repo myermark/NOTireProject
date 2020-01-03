@@ -193,10 +193,10 @@ stacks.gam <- lapply(1:length(dat.selected), function (i) {
 )
 
 #Define the INLA formulas
-formulas <- lapply(1:length(dat.selected), function(i) {
-  formula <- list()
+formulas <- data.frame(nonspatial = rep(NA, times = 7), randint = rep(NA, times = 7), spatial = rep(NA, times = 7), temporal = rep(NA, times = 7), spatiotemporal = rep(NA, times = 7))
+for (i in 1:length(dat.selected)) {
   len <- length(dat.selected[[i]])
-  formula[[i]] <- paste("y ~ -1 + ",
+  formulas$nonspatial[i] <- paste("y ~ -1 + ",
                         names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
                         "+",
                         names(dat.selected[[i]])[len-3], 
@@ -205,14 +205,68 @@ formulas <- lapply(1:length(dat.selected), function(i) {
                         "+",
                         names(dat.selected[[i]])[len-1], 
                         "+",
-                        names(dat.selected[[i]])[len], 
-                        "+ f(spatial, model=spdes[[i]])"#, #Spatial model component
+                        names(dat.selected[[i]])[len]#, 
+                        #"+ f(spatial, model=spdes[[", i, "]])"#, #Spatial model component
                         #"+ f(WayPt_ID, model = 'iid')"#, #Random intercept by waypoint site
                         #"+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
   )
-  return(formula[[i]])
+  formulas$randint[i]<- paste("y ~ -1 + ",
+                                   names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
+                                   "+",
+                                   names(dat.selected[[i]])[len-3], 
+                                   "+",
+                                   names(dat.selected[[i]])[len-2], 
+                                   "+",
+                                   names(dat.selected[[i]])[len-1], 
+                                   "+",
+                                   names(dat.selected[[i]])[len], 
+                                   #"+ f(spatial, model=spdes[[", i, "]])"#, #Spatial model component
+                                   "+ f(WayPt_ID, model = 'iid')"#, #Random intercept by waypoint site
+                                   #"+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
+  )
+  formulas$spatial[i] <- paste("y ~ -1 + ",
+                                   names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
+                                   "+",
+                                   names(dat.selected[[i]])[len-3], 
+                                   "+",
+                                   names(dat.selected[[i]])[len-2], 
+                                   "+",
+                                   names(dat.selected[[i]])[len-1], 
+                                   "+",
+                                   names(dat.selected[[i]])[len], 
+                                   "+ f(spatial, model=spdes[[", i, "]])"#, #Spatial model component
+                                   #"+ f(WayPt_ID, model = 'iid')"#, #Random intercept by waypoint site
+                                   #"+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
+  )
+  formulas$temporal[i]<- paste("y ~ -1 + ",
+                                   names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
+                                   "+",
+                                   names(dat.selected[[i]])[len-3], 
+                                   "+",
+                                   names(dat.selected[[i]])[len-2], 
+                                   "+",
+                                   names(dat.selected[[i]])[len-1], 
+                                   "+",
+                                   names(dat.selected[[i]])[len], 
+                                   #"+ f(spatial, model=spdes[[", i, "]])"#, #Spatial model component
+                                   #"+ f(WayPt_ID, model = 'iid')"#, #Random intercept by waypoint site
+                                   "+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
+  )
+  formulas$spatiotemporal[i] <- paste("y ~ -1 + ",
+                                   names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
+                                   "+",
+                                   names(dat.selected[[i]])[len-3], 
+                                   "+",
+                                   names(dat.selected[[i]])[len-2], 
+                                   "+",
+                                   names(dat.selected[[i]])[len-1], 
+                                   "+",
+                                   names(dat.selected[[i]])[len], 
+                                   "+ f(spatial, model=spdes[[", i, "]])", #Spatial model component
+                                   #"+ f(WayPt_ID, model = 'iid')"#, #Random intercept by waypoint site
+                                   "+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
+  )
 }
-)
 
 #Define prior for precision
 prec.prior <- list(prior='pc.prec', param=c(0.5, 0.5))
@@ -220,7 +274,7 @@ prec.prior <- list(prior='pc.prec', param=c(0.5, 0.5))
 #Run the binomial part of the models
 results.bin <- lapply(1:length(dat.selected), function (i) {
   inlas.bin <- list()
-  inlas.bin[[i]] <- inla(as.formula(formulas[[i]]),
+  inlas.bin[[i]] <- inla(as.formula(formulas$spatial[i]),
                       family="binomial",
                       Ntrials = 1,
                       data=inla.stack.data(stacks.bin[[i]]),
@@ -237,7 +291,7 @@ names(results.bin) <- splist
 #Run the gamma part of the models
 results.gam <- lapply(1:length(dat.selected), function (i) {
   inlas.gam <- list()
-  inlas.gam[[i]] <- inla(as.formula(formulas[[i]]),
+  inlas.gam[[i]] <- inla(as.formula(formulas$spatial[i]),
                          family="gamma",
                          data=inla.stack.data(stacks.gam[[i]]),
                          control.predictor=list(compute=TRUE, A=inla.stack.A(stacks.gam[[i]]), link = 1), 
