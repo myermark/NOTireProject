@@ -582,3 +582,6 @@ points(x = km_loc[,1],
        pch = 16)
 plot(nola_roads, add=T, lwd = 0.75)
 plot(border_km, add=T)
+
+rm(list = ls(pattern = ".test$"))
+
