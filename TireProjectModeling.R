@@ -19,6 +19,7 @@ library(ggmap)
 library(dplyr)
 library(raster)
 library(gstat)
+library(tigris)
 
 #Import data---- 
 dat.selected <- readRDS(file = "Mosquito_Variables_Selected.rds")
@@ -424,18 +425,26 @@ PlotField2 <- function(field, mesh, ContourMap, xlim, ylim, Add=FALSE, MyMain, .
              ...)  
 }
 
-
+#Visualize using road shapefile from TIGERLINE
+nola_roads <- roads(state="Louisiana", county = "Orleans")
+nola_roads <- spTransform(nola_roads, crs("+proj=utm +zone=15 +datum=NAD83 +units=km +no_defs +ellps=GRS80 +towgs84=0,0,0"))
+border_km <- spTransform(border, crs("+proj=utm +zone=15 +datum=NAD83 +units=km +no_defs +ellps=GRS80 +towgs84=0,0,0"))
 par(oma=c( 0,0,0,0), mar = c(4,4,1,1)) # margin of 4 spaces width at right hand side
-w.pm <- results.gam$`Cx. quinq`$summary.random$spatial$mean
+
+w.pm <- results.bin[[i]]$summary.random$spatial$mean
+km_loc <- unique(data.frame(long = dat.selected[[i]]$Adj_X, lat = dat.selected[[i]]$Adj_Y))
 PlotField2(field = w.pm, 
-           mesh = meshes[[4]], 
-           xlim = range(meshes[[4]]$loc[,1]), 
-           ylim = range(meshes[[4]]$loc[,2]),
-           MyMain = "")
-km_loc <- unique(data.frame(long = dat.selected[[4]]$Adj_X, lat = dat.selected[[4]]$Adj_Y))
+           mesh = meshes[[i]], 
+           xlim = range(meshes[[i]]$loc[,1]), 
+           ylim = range(meshes[[i]]$loc[,2]),
+           MyMain = paste(names(dat.selected)[i], "Occurrence Model (Binomial)")
+           )
+axis(1); axis(2)
 points(x = km_loc[,1],
        y = km_loc[,2], 
        cex = 0.5, 
        col = "black", 
        pch = 16)
+plot(nola_roads, add=T, lwd = 0.75)
+plot(border_km, add=T)
 
