@@ -15,12 +15,13 @@ library(INLA)
 library(fields)
 library(rgdal)
 library(sf)
+library(sp)
 library(ggmap)
 library(dplyr)
 library(raster)
 library(gstat)
 library(tigris)
-library(sp)
+
 
 #Import data---- 
 #Import data
