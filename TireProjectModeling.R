@@ -20,6 +20,7 @@ library(dplyr)
 library(raster)
 library(gstat)
 library(tigris)
+library(sp)
 
 #Import data---- 
 #Import data
@@ -54,6 +55,21 @@ map + geom_point(data = loc, pch=21, stroke = 1, aes(x=long, y= lat))  +
         axis.title.y = element_text(color = "black", size = 14, face = "bold"), 
         plot.title = element_text(size=20, face = "bold"))
 
+#Plot the relative mosquito counts per tire sample site
+for(i in 1:length(dat.selected)) {
+temp  <- dflist[[i]] %>% group_by(WayPt_ID) %>% summarize(LatY = mean(LatY, na.rm=T), LongX = mean(LongX, na.rm=T), MosqCount = sum(MosqCount, na.rm=T))
+#tiff(filename = paste0("./Figures/Counts/", names(dat.selected)[i], " MappedCounts.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+print(map + geom_point(data = arrange(temp, MosqCount), pch=19, stroke = 1, aes(x=LongX, y= LatY, size = MosqCount, col = MosqCount))  + 
+  guides(size = F) +
+  labs(x = "Longitude", y = "Latitude") + 
+  ggtitle(paste0(names(dflist)[i], " Total Counts")) +
+  scale_color_gradient(high = "red", low = "blue") +
+  theme(axis.title.x = element_text(color = "black", size = 14, face = "bold"),
+        axis.title.y = element_text(color = "black", size = 14, face = "bold"), 
+        plot.title = element_text(size=20, face = "bold"))
+)
+#dev.off()
+}
 #Check the distribution of responses to determine link function for GLMM (if any)
 #All responses
 lapply(1:length(dat.selected), function(i){
