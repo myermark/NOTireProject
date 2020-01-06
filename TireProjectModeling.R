@@ -431,9 +431,12 @@ nola_roads <- spTransform(nola_roads, crs("+proj=utm +zone=15 +datum=NAD83 +unit
 border_km <- spTransform(border, crs("+proj=utm +zone=15 +datum=NAD83 +units=km +no_defs +ellps=GRS80 +towgs84=0,0,0"))
 par(oma=c( 0,0,0,0), mar = c(4,4,1,1)) # margin of 4 spaces width at right hand side
 
-w.pm <- results.bin[[i]]$summary.random$spatial$mean
+for(i in 1:length(dat.selected)) {
 km_loc <- unique(data.frame(long = dat.selected[[i]]$Adj_X, lat = dat.selected[[i]]$Adj_Y))
-PlotField2(field = w.pm, 
+#Plot binomial models
+tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Binomial.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+w.bin <- results.bin[[i]]$summary.random$spatial$mean
+PlotField2(field = w.bin, 
            mesh = meshes[[i]], 
            xlim = range(meshes[[i]]$loc[,1]), 
            ylim = range(meshes[[i]]$loc[,2]),
@@ -447,4 +450,24 @@ points(x = km_loc[,1],
        pch = 16)
 plot(nola_roads, add=T, lwd = 0.75)
 plot(border_km, add=T)
+dev.off()
 
+#Plot gamma models
+tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Gamma.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+w.gam <- results.gam[[i]]$summary.random$spatial$mean
+PlotField2(field = w.gam, 
+           mesh = meshes[[i]], 
+           xlim = range(meshes[[i]]$loc[,1]), 
+           ylim = range(meshes[[i]]$loc[,2]),
+           MyMain = paste(names(dat.selected)[i], "Abundance Model (Gamma)")
+)
+axis(1); axis(2)
+points(x = km_loc[,1],
+       y = km_loc[,2], 
+       cex = 0.5, 
+       col = "black", 
+       pch = 16)
+plot(nola_roads, add=T, lwd = 0.75)
+plot(border_km, add=T)
+dev.off()
+}
