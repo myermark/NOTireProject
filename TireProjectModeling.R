@@ -22,7 +22,10 @@ library(gstat)
 library(tigris)
 
 #Import data---- 
+#Import data
+tire_fulldat <- read.csv("TireData121219.csv") %>% dplyr::select(., -c(X, comments, DispX, DispY, optional)) %>% na.omit()
 dat.selected <- readRDS(file = "Mosquito_Variables_Selected.rds")
+splist <- unique(tire_fulldat$MosqSpp)
 
 #Visualize data and prepare for modeling----
 #Plot the sampling locations
@@ -119,7 +122,9 @@ variograms <- lapply(1:length(dat.selected), function(i) {
 )
 
 for (i in 1:length(dat.selected)) {
+  #tiff(filename = paste0("./Figures/Variograms/", names(dat.selected)[i], " Vario.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
   print(plot(variograms[[i]], main = names(dat.selected)[[i]], col = 1,))
+  #dev.off()
 }
 
 #Define the INLA model ----
@@ -337,6 +342,8 @@ for (i in 1:length(dat.selected)) {
   dat.selected[[i]]$E <- E
   dat.pos[[i]] <- filter(dat.selected[[i]], MosqPerL > 0)
   
+  #tiff(filename = paste0("./Figures/Validation/", names(dat.selected)[i], " ObservedVsFit.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+  
   plot(y = dat.pos[[i]]$MosqPerL, 
        x = dat.pos[[i]]$mu, 
        xlab = "Fitted values",
@@ -344,6 +351,7 @@ for (i in 1:length(dat.selected)) {
        main = names(dat.selected)[i], 
        xlim = range(dat.selected[[i]]$MosqPerL), 
        ylim = range(dat.selected[[i]]$MosqPerL))
+  #dev.off()
 }
 
 #Combine the models to get a joint mean and variance
@@ -387,6 +395,7 @@ Es_zag <- lapply(1:length(dat.selected), function (i) {
 
 #Plot the residuals vs the fitted values for each model 
 for(i in 1:length(dat.selected)) {
+  #tiff(filename = paste0("./Figures/Validation/", names(dat.selected)[i], " ResidVsFit.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
   plot(y = Es_zag[[i]], 
        x = exps_zag[[i]], 
        xlab = "Fitted data",
@@ -394,6 +403,7 @@ for(i in 1:length(dat.selected)) {
        xlim = range(dat.selected[[i]]$MosqPerL),
        main = names(dat.selected)[i] 
   )
+  #dev.off()
 }
 
 #Plot the spatial field for Cx. quinquefasciatus
@@ -434,7 +444,7 @@ par(oma=c( 0,0,0,0), mar = c(4,4,1,1)) # margin of 4 spaces width at right hand 
 for(i in 1:length(dat.selected)) {
 km_loc <- unique(data.frame(long = dat.selected[[i]]$Adj_X, lat = dat.selected[[i]]$Adj_Y))
 #Plot binomial models
-tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Binomial.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+#tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Binomial.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
 w.bin <- results.bin[[i]]$summary.random$spatial$mean
 PlotField2(field = w.bin, 
            mesh = meshes[[i]], 
@@ -450,10 +460,10 @@ points(x = km_loc[,1],
        pch = 16)
 plot(nola_roads, add=T, lwd = 0.75)
 plot(border_km, add=T)
-dev.off()
+#dev.off()
 
 #Plot gamma models
-tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Gamma.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+#tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Gamma.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
 w.gam <- results.gam[[i]]$summary.random$spatial$mean
 PlotField2(field = w.gam, 
            mesh = meshes[[i]], 
@@ -469,5 +479,5 @@ points(x = km_loc[,1],
        pch = 16)
 plot(nola_roads, add=T, lwd = 0.75)
 plot(border_km, add=T)
-dev.off()
+#dev.off()
 }
