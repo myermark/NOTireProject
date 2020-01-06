@@ -15,12 +15,13 @@ library(INLA)
 library(fields)
 library(rgdal)
 library(sf)
+library(sp)
 library(ggmap)
 library(dplyr)
 library(raster)
 library(gstat)
 library(tigris)
-library(sp)
+
 
 #Import data---- 
 #Import data
@@ -497,3 +498,87 @@ plot(nola_roads, add=T, lwd = 0.75)
 plot(border_km, add=T)
 #dev.off()
 }
+
+#TESTING AREA-----
+#Define the INLA model ----
+i.test <- 1
+#Create mesh
+  loc.test <- cbind(dat.selected[[i.test]]$Adj_X, dat.selected[[i.test]]$Adj_Y) 
+  bnd.test <-inla.nonconvex.hull(loc.test) #Makes a nonconvex hull around the points
+  mesh.test <-inla.mesh.2d(boundary=bnd.test, cutoff=0.25, max.edge=c(1,4)) 
+  
+#Make the SPDE
+count.test = 0
+test.range = list()
+for(i in seq(0.5, 2.5, by=0.25)) {
+  for(j in seq(0.5, 2.5, by = 0.25)) {
+count.test = count.test + 1
+  spde.test <- inla.spde2.pcmatern(
+    mesh=mesh.test, alpha=2, ### mesh and smoothness parameter
+    prior.range=c(i, 0.05), ### P(range<0.5km)=0.05
+    prior.sigma=c(j, 0.05) ### P(sigma>0.5)=0.05
+  )
+
+#Create the projector matrix 
+A.test <- inla.spde.make.A(mesh.test, loc.test)
+
+stack.test <- inla.stack(
+  tag="Fit",
+  data=list(y=ifelse(dat.selected[[i.test]]$MosqPerL == 0, NA, dat.selected[[i.test]]$MosqPerL)),
+  A=list(A.test,1),
+  effects=list(list(spatial = 1:spde.test$n.spde), data.frame(dat.selected[[i.test]])
+               # cbind(dplyr::select(data.frame(dat.selected[[i.test]]), 1:(ncol(dat.selected[[i.test]]) - 5)), 
+               #       (dplyr::select(data.frame(dat.selected[[i.test]]), (ncol(dat.selected[[i.test]]) - 4):ncol(dat.selected[[i.test]])) %>%
+               #          mutate_if(is.numeric, scale))
+               # )
+  )
+)
+
+len.test <- length(dat.selected[[i.test]])
+formula.test <- paste("y ~ -1 + ",
+                             names(dat.selected[[i.test]])[len.test-4], #This pastes the last 5 variable names together into the formula
+                             "+",
+                             names(dat.selected[[i.test]])[len.test-3], 
+                             "+",
+                             names(dat.selected[[i.test]])[len.test-2], 
+                             "+",
+                             names(dat.selected[[i.test]])[len.test-1], 
+                             "+",
+                             names(dat.selected[[i.test]])[len.test], 
+                             "+ f(spatial, model=spde.test)"#, #Spatial model component
+                             #"+ f(WayPt_ID, model = 'iid')"#, #Random intercept by waypoint site
+                             #"+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
+)
+
+
+inla.test <- inla(as.formula(formula.test),
+                  family="gamma",
+                  data=inla.stack.data(stack.test),
+                  control.predictor=list(compute=TRUE, A=inla.stack.A(stack.test), link = 1), 
+                  control.inla=list(int.strategy='auto', correct = TRUE, correct.factor = 10),
+                  control.family=list(hyper = list(theta = prec.prior)), 
+                  control.compute=list(dic=TRUE,cpo=TRUE, waic=TRUE,po=TRUE,config=TRUE),
+                  control.fixed=list(expand.factor.strategy ='inla'),
+                  verbose = F)
+
+summary(inla.test)
+
+test.range[[count.test]]<- c(inla.test$summary.hyperpar$mean[2], inla.test$waic$waic)
+  }
+}
+
+w.test <- inla.test$summary.random$spatial$mean
+PlotField2(field = w.test, 
+           mesh = mesh.test, 
+           xlim = range(mesh.test$loc[,1]), 
+           ylim = range(mesh.test$loc[,2]),
+           MyMain = paste(names(dat.selected)[i.test], "Test Model (Gamma)")
+)
+axis(1); axis(2)
+points(x = km_loc[,1],
+       y = km_loc[,2], 
+       cex = 0.5, 
+       col = "black", 
+       pch = 16)
+plot(nola_roads, add=T, lwd = 0.75)
+plot(border_km, add=T)
