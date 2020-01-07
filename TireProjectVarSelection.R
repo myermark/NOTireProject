@@ -34,6 +34,7 @@ res <- filter(tire_fulldat, MosqSpp == "Cx. restuans")
 nigr <- filter(tire_fulldat, MosqSpp == "Cx. nigripalpus")
 dflist <- list(aeg, albo, sal, quin, cru, res, nigr) #List of dataframes for easier use of "apply" functions
 names(dflist) = splist
+saveRDS(dflist, file = "dflist.rds")
 rm(aeg, albo, sal, quin, cru, res, nigr)
 
 #Get correlations between every IV and the dependent variable for each species separately
