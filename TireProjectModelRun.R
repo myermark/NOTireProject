@@ -240,7 +240,6 @@ rm(i,j,len,mod,temp,mod.templist)
 save.image()
 
 #TESTING AREA-----
-#Define the INLA model ----
 i.test <- 1
 #Create mesh
   loc.test <- cbind(dat.selected[[i.test]]$Adj_X, dat.selected[[i.test]]$Adj_Y) 

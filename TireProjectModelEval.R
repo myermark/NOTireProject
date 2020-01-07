@@ -26,81 +26,59 @@ load(".Rdata")
 
 #Perform model evaluation and validation
 #Plot observed vs. fits for the gamma portion of the model 
-dat.pos <- list()
-for (i in 1:length(dat.selected)) {
-  N <- nrow(dat.selected[[i]])
-  mu <- results.gam[[i]]$summary.fitted.values[1:N, "mean"]
-  r <- results.gam[[i]]$summary.hyperpar[1, "mean"]
-  varY <- mu^2 / r
-  E <- (dat.selected[[i]]$MosqPerL - mu) / (sqrt(varY))
-  
-  dat.selected[[i]]$mu <- mu
-  dat.selected[[i]]$E <- E
-  dat.pos[[i]] <- filter(dat.selected[[i]], MosqPerL > 0)
-  
-  #tiff(filename = paste0("./Figures/Validation/", names(dat.selected)[i], " ObservedVsFit.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
-  
-  plot(y = dat.pos[[i]]$MosqPerL, 
-       x = dat.pos[[i]]$mu, 
-       xlab = "Fitted values",
-       ylab = "Observed data", 
-       main = names(dat.selected)[i], 
-       xlim = range(dat.selected[[i]]$MosqPerL), 
-       ylim = range(dat.selected[[i]]$MosqPerL))
-  #dev.off()
-}
+lapply(1:length(dat.selected), function (i) {
+  lapply(1:length(modlist), function (j) {
+    tryCatch(
+      do.call(function (i,j) { 
+        N <- nrow(dat.selected[[i]])
+        mu <- results.gam[[i]][[j]]$summary.fitted.values[1:N, "mean"]
+        r <- results.gam[[i]][[j]]$summary.hyperpar[1, "mean"]
+        varY <- mu^2 / r
+        E <- (dat.selected[[i]]$MosqPerL - mu) / (sqrt(varY))
+        
+        dat.temp <- dat.selected[[i]]
+        dat.temp$mu <- mu
+        dat.temp$E <- E
+        dat.pos <- filter(dat.temp, MosqPerL > 0)
+        
+        #tiff(filename = paste0("./Figures/Validation/", names(dat.selected)[i], modlist[j], " ObservedVsFit.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+        
+        plot(y = dat.pos$MosqPerL, 
+             x = dat.pos$mu, 
+             xlab = "Fitted values",
+             ylab = "Observed data", 
+             main = paste(names(dat.selected)[i], modlist[j], "Observed vs. Fits"),
+             xlim = range(dat.temp$MosqPerL), 
+             ylim = range(dat.temp$MosqPerL))
+        #dev.off()
+      }, args = list(i,j))
+    , error = function (e) print("Error"))
+  })
+})
 
 #Combine the models to get a joint mean and variance
-pis <- lapply(1:length(dat.selected), function (i) {
-  pi = list()
-  N = nrow(dat.selected[[i]])
-  pi[[i]] = results.bin[[i]]$summary.fitted.values[1:N, "mean"]
-  return(pi[[i]])
-}
-)
-
-mus <- lapply(1:length(dat.selected), function (i) {
-  mu = list()
-  N = nrow(dat.selected[[i]])
-  mu[[i]] = results.gam[[i]]$summary.fitted.values[1:N, "mean"]
-  return(mu[[i]])
-}
-)
-
-exps_zag <- lapply(1:length(dat.selected), function (i) {
-  exp <- list()
-  exp[[i]] = pis[[i]] * mus[[i]]
-  return(exp[[i]])
-}
-)
-
-vars_zag <- lapply(1:length(dat.selected), function (i) {
-  var <- list()
-  r <- results.gam[[i]]$summary.hyperpar[1, "mean"]
-  var[[i]] = (mus[[i]] ^ 2) * (pis[[i]] * r + pis[[i]] - pis[[i]]^2 * r) / r
-  return(var[[i]])
-}
-)
-
-Es_zag <- lapply(1:length(dat.selected), function (i) {
-  E <- list()
-  E[[i]] = as.numeric((dat.selected[[i]]$MosqPerL - exps_zag[[i]]) / sqrt(vars_zag[[i]]))
-  return(E[[i]])
-}
-)
-
 #Plot the residuals vs the fitted values for each model 
-for(i in 1:length(dat.selected)) {
-  #tiff(filename = paste0("./Figures/Validation/", names(dat.selected)[i], " ResidVsFit.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
-  plot(y = Es_zag[[i]], 
-       x = exps_zag[[i]], 
-       xlab = "Fitted data",
-       ylab = "Residuals", 
-       xlim = range(dat.selected[[i]]$MosqPerL),
-       main = names(dat.selected)[i] 
-  )
-  #dev.off()
-}
+lapply(1:length(dat.selected), function (i) {
+  lapply(1:length(modlist), function (j) {
+    tryCatch({
+      pi = results.bin[[i]][[j]]$summary.fitted.values[1:N, "mean"]
+      mu = results.gam[[i]][[j]]$summary.fitted.values[1:N, "mean"]
+      exp = pi * mu
+      r <- results.gam[[i]][[j]]$summary.hyperpar[1, "mean"]
+      var= (mu ^ 2) * (pi * r + pi - pi^2 * r) / r
+      E = as.numeric((dat.selected[[i]]$MosqPerL - exp) / sqrt(var))
+      #tiff(filename = paste0("./Figures/Validation/", names(dat.selected)[i], modlist[j], " ResidVsFit.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+      plot(y = E, 
+           x = exp, 
+           xlab = "Fitted values",
+           ylab = "Residuals", 
+           xlim = range(dat.selected[[i]]$MosqPerL),
+           main = paste(names(dat.selected)[i], modlist[j], "Residuals vs. Fits") 
+      )
+      #dev.off()
+    }, error = function(e) print("Error"))
+  })
+})
 
 #Plot the spatial field 
 PlotField2 <- function(field, mesh, ContourMap, xlim, ylim, Add=FALSE, MyMain, ...){
@@ -141,7 +119,7 @@ for(i in 1:length(dat.selected)) {
   km_loc <- unique(data.frame(long = dat.selected[[i]]$Adj_X, lat = dat.selected[[i]]$Adj_Y))
   #Plot binomial models
   #tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Binomial.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
-  w.bin <- results.bin[[i]]$summary.random$spatial$mean
+  w.bin <- results.bin[[i]]$spatial$summary.random$spatial$mean
   PlotField2(field = w.bin, 
              mesh = meshes[[i]], 
              xlim = range(meshes[[i]]$loc[,1]), 
@@ -160,7 +138,7 @@ for(i in 1:length(dat.selected)) {
   
   #Plot gamma models
   #tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Gamma.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
-  w.gam <- results.gam[[i]]$summary.random$spatial$mean
+  w.gam <- results.gam[[i]]$spatial$summary.random$spatial$mean
   PlotField2(field = w.gam, 
              mesh = meshes[[i]], 
              xlim = range(meshes[[i]]$loc[,1]), 
