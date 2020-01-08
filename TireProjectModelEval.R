@@ -16,6 +16,7 @@ library(rgdal)
 library(sf)
 library(sp)
 library(ggmap)
+library(plyr)
 library(dplyr)
 library(raster)
 library(gstat)
@@ -25,6 +26,49 @@ library(tigris)
 load(".Rdata")
 
 #Perform model evaluation and validation
+#Compare by cpo check, WAIC and log-likelihood for each model by species
+options(scipen = 999)#Suppress scientific notation 
+bin.comparison.tables = data.frame()
+gam.comparison.tables = data.frame()
+bin.comparison.tables <- ldply(1:length(dat.selected), function (i) {
+    temp.df = data.frame() 
+    temp.df <- ldply(1:length(modlist), function (j) {
+      cpo <- sum(results.bin[[i]][[j]]$cpo$failure, na.rm=T)
+      waic <- results.bin[[i]][[j]]$waic$waic
+      loglik <- results.bin[[i]][[j]]$mlik[1]
+      return(data.frame(cpo = round(cpo,2), waic = round(waic, 5), loglik = round(loglik, 5)))
+    })
+    bin.comparison.tables <- rbind(bin.comparison.tables, temp.df)
+    return(bin.comparison.tables)
+})
+bin.comparison.tables$type = rep("Occurrence", times = nrow(bin.comparison.tables))
+bin.comparison.tables$species = rep(splist, each = length(modlist)) ; bin.comparison.tables$model = rep(modlist, times = length(splist))
+
+gam.comparison.tables <- ldply(1:length(dat.selected), function (i) {
+  temp.df = data.frame() 
+  temp.df <- ldply(1:length(modlist), function (j) {
+    cpo <- try(sum(results.gam[[i]][[j]]$cpo$failure, na.rm=T))
+    if(inherits(cpo, "try-error"))
+    {
+      return(data.frame(cpo = NA, waic = NA, loglik = NA))
+      next
+    }
+    waic <- try(results.gam[[i]][[j]]$waic$waic)
+    loglik <- try(results.gam[[i]][[j]]$mlik[1])
+    return(data.frame(cpo = round(cpo, 2), waic = round(waic, 5), loglik = round(loglik, 5)))
+  })
+  gam.comparison.tables <- rbind(gam.comparison.tables, temp.df)
+  return(gam.comparison.tables)
+})
+gam.comparison.tables$type = rep("Abundance", times = nrow(gam.comparison.tables))
+gam.comparison.tables$species = rep(splist, each = length(modlist)) ; gam.comparison.tables$model = rep(modlist, times = length(splist))
+
+comparison.tables <- rbind(bin.comparison.tables, gam.comparison.tables) %>% dplyr::select(species, type, model, everything()) %>% dplyr::arrange(species)
+
+#Save as a csv file
+write.csv(comparison.tables, file="ModelComparison.csv")
+rm(bin.comparison.tables, gam.comparison.tables)
+
 #Plot observed vs. fits for the gamma portion of the model 
 lapply(1:length(dat.selected), function (i) {
   lapply(1:length(modlist), function (j) {
