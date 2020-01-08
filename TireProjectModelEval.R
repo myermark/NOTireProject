@@ -115,11 +115,11 @@ nola_roads <- spTransform(nola_roads, crs("+proj=utm +zone=15 +datum=NAD83 +unit
 border_km <- spTransform(border, crs("+proj=utm +zone=15 +datum=NAD83 +units=km +no_defs +ellps=GRS80 +towgs84=0,0,0"))
 par(oma=c( 0,0,0,0), mar = c(4,4,1,1)) # margin of 4 spaces width at right hand side
 
-for(i in 1:length(dat.selected)) {
+lapply(1:length(dat.selected), function (i) {
   km_loc <- unique(data.frame(long = dat.selected[[i]]$Adj_X, lat = dat.selected[[i]]$Adj_Y))
   #Plot binomial models
-  #tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Binomial.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
-  w.bin <- results.bin[[i]]$spatial$summary.random$spatial$mean
+  tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Binomial.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+  w.bin <- results.bin[[i]]$Spatial$summary.random$spatial$mean
   PlotField2(field = w.bin, 
              mesh = meshes[[i]], 
              xlim = range(meshes[[i]]$loc[,1]), 
@@ -134,11 +134,11 @@ for(i in 1:length(dat.selected)) {
          pch = 16)
   plot(nola_roads, add=T, lwd = 0.75)
   plot(border_km, add=T)
-  #dev.off()
+  dev.off()
   
   #Plot gamma models
-  #tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Gamma.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
-  w.gam <- results.gam[[i]]$spatial$summary.random$spatial$mean
+  tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Gamma.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+  w.gam <- results.gam[[i]]$Spatial$summary.random$spatial$mean
   PlotField2(field = w.gam, 
              mesh = meshes[[i]], 
              xlim = range(meshes[[i]]$loc[,1]), 
@@ -153,5 +153,5 @@ for(i in 1:length(dat.selected)) {
          pch = 16)
   plot(nola_roads, add=T, lwd = 0.75)
   plot(border_km, add=T)
-  #dev.off()
-}
+  dev.off()
+})
