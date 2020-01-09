@@ -18,11 +18,11 @@ library(rgdal)
 library(sf)
 library(sp)
 library(ggmap)
-library(dplyr)
 library(raster)
 library(gstat)
 library(tigris)
-
+library(formattable)
+library(dplyr)
 
 #Import data---- 
 #Import data
@@ -83,6 +83,16 @@ lapply(1:length(dat.selected), function(i){
   hist(x$MosqPerL, main=paste(names(dat.selected)[i], "Zeroes Excluded"), xlab = "Mosquito Larvae Per Liter")
 })
 
+#Determine the percentage of zero responses by species
+zero.counts <- data.frame(species = splist, zeroes = rep(NA, times = length(splist)), percent.zero =  rep(NA, times = length(splist)))
+for(i in 1:length(dat.selected)) {
+  zero.counts$species[i] = splist[i]
+  zero.counts$zeroes[i] = sum(dat.selected[[i]]$MosqPerL == 0)
+  zero.counts$percent.zero[i] = round(sum(dat.selected[[i]]$MosqPerL == 0) / nrow(dat.selected[[i]]), 2)  
+}
+
+formattable(zero.counts, align =c("l", rep("r", ncol(zero.counts) - 1)))
+
 #Define the nonspatial GLM model formulas
 nonspatial.formulas <- lapply(1:length(dat.selected), function(i) {
   formula <- list()
@@ -105,7 +115,7 @@ nonspatial.formulas <- lapply(1:length(dat.selected), function(i) {
 #Fit nonspatial GLM models
 nonspatial.results <- lapply(1:length(dat.selected), function (i) {
   nonspatial.result <- list()
-  nonspatial.result[[i]] <- glm(as.formula(nonspatial.formulas[[i]]), data = dat.selected[[i]], family = gaussian)
+  nonspatial.result[[i]] <- glm(as.formula(nonspatial.formulas[[i]]), data = dat.selected[[i]], family = poisson)
   return(nonspatial.result[[i]])
 }
 )
@@ -140,9 +150,12 @@ variograms <- lapply(1:length(dat.selected), function(i) {
 )
 
 for (i in 1:length(dat.selected)) {
-  #tiff(filename = paste0("./Figures/Variograms/", names(dat.selected)[i], " Vario.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
-  print(plot(variograms[[i]], main = names(dat.selected)[[i]], col = 1,))
-  #dev.off()
+  tiff(filename = paste0("./Figures/Variograms/", names(dat.selected)[i], " Vario.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+  lo <- loess(variograms[[i]]$gamma ~ variograms[[i]]$dist)
+  xl <- seq(min(variograms[[i]]$dist),max(variograms[[i]]$dist), (max(variograms[[i]]$dist) - min(variograms[[i]]$dist))/1000)
+  plot(x = variograms[[i]]$dist, y = variograms[[i]]$gamma, main = names(dat.selected)[[i]], xlab = "Distance", ylab = "Semivariance")
+  lines(xl, predict(lo, xl), lwd = 1.5, col = "blue")
+  dev.off()
 }
 
 #Save environment for later loading by the modeling script
