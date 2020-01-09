@@ -165,39 +165,42 @@ lapply(1:length(dat.selected), function (i) {
   km_loc <- unique(data.frame(long = dat.selected[[i]]$Adj_X, lat = dat.selected[[i]]$Adj_Y))
   #Plot binomial models
   tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Occurrence.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
-  w.bin <- results.bin[[i]]$Spatial$summary.random$spatial$mean
-  PlotField2(field = w.bin, 
-             mesh = meshes[[i]], 
-             xlim = range(meshes[[i]]$loc[,1]), 
-             ylim = range(meshes[[i]]$loc[,2]),
-             MyMain = paste(names(dat.selected)[i], "Occurrence Model")
-  )
-  axis(1); axis(2)
-  points(x = km_loc[,1],
-         y = km_loc[,2], 
-         cex = 0.5, 
-         col = "black", 
-         pch = 16)
-  plot(nola_roads, add=T, lwd = 0.75)
-  plot(border_km, add=T)
-  dev.off()
-  
+  tryCatch({
+    w.bin <- results.bin[[i]]$Spatial$summary.random$spatial$mean
+    PlotField2(field = w.bin, 
+               mesh = meshes[[i]], 
+               xlim = range(meshes[[i]]$loc[,1]), 
+               ylim = range(meshes[[i]]$loc[,2]),
+               MyMain = paste(names(dat.selected)[i], "Occurrence Model")
+    )
+    axis(1); axis(2)
+    points(x = km_loc[,1],
+           y = km_loc[,2], 
+           cex = 0.5, 
+           col = "black", 
+           pch = 16)
+    plot(nola_roads, add=T, lwd = 0.75)
+    plot(border_km, add=T)
+    dev.off()
+  }, error = function (e) print("Error"))
   #Plot Negative Binomial models
   tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Abundance.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
-  w.nb <- results.nb[[i]]$Spatial$summary.random$spatial$mean
-  PlotField2(field = w.nb, 
-             mesh = meshes[[i]], 
-             xlim = range(meshes[[i]]$loc[,1]), 
-             ylim = range(meshes[[i]]$loc[,2]),
-             MyMain = paste(names(dat.selected)[i], "Abundance Model")
-  )
-  axis(1); axis(2)
-  points(x = km_loc[,1],
-         y = km_loc[,2], 
-         cex = 0.5, 
-         col = "black", 
-         pch = 16)
-  plot(nola_roads, add=T, lwd = 0.75)
-  plot(border_km, add=T)
-  dev.off()
+  tryCatch({
+    w.nb <- results.nb[[i]]$Spatial$summary.random$spatial$mean
+    PlotField2(field = w.nb, 
+               mesh = meshes[[i]], 
+               xlim = range(meshes[[i]]$loc[,1]), 
+               ylim = range(meshes[[i]]$loc[,2]),
+               MyMain = paste(names(dat.selected)[i], "Abundance Model")
+    )
+    axis(1); axis(2)
+    points(x = km_loc[,1],
+           y = km_loc[,2], 
+           cex = 0.5, 
+           col = "black", 
+           pch = 16)
+    plot(nola_roads, add=T, lwd = 0.75)
+    plot(border_km, add=T)
+    dev.off()
+  }, error = function(e) print("Error"))
 })

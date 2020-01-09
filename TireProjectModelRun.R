@@ -45,8 +45,13 @@ spdes <- lapply(1:length(meshes), function (i) {
   spde[[i]] <- inla.spde2.pcmatern(
   mesh=meshes[[i]], alpha=2, ### mesh and smoothness parameter
   prior.range=c(1, 0.05), ### P(range<1km)=0.05
-  prior.sigma=c(0.5, 0.05) ### P(sigma>0.5)=0.05
-    )
+  prior.sigma=c(sqrt(log(max(dat.selected[[i]]$MosqPerL+1))/3), 0.05) 
+  # P(sigma > ) = 0.05
+  # MosqPerL = exp(u_i) 
+  # some u_i have to be as large as sigma_u to cover max(dat.selected$MosqPerL)
+  # If u_i ~ N(0, sigma_u^2) then it is unlikely that sigma_u > log(max(dat.selected$MosqPerL))
+  # So this takes the 99.7th quantile (3 standard deviations) of N(0, sigma_u^2) as the max value for the prior
+  )
   return(spde[[i]])
   }
 )
@@ -111,10 +116,7 @@ for (i in 1:length(dat.selected)) {
                         "+",
                         names(dat.selected[[i]])[len-1], 
                         "+",
-                        names(dat.selected[[i]])[len]#, 
-                        #"+ f(spatial, model=spdes[[", i, "]])"#, #Spatial model component
-                        #"+ f(WayPt_ID, model = 'iid')"#, #Random intercept by waypoint site
-                        #"+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
+                        names(dat.selected[[i]])[len] 
   )
   formulas$randint[i]<- paste("y ~ -1 + ",
                                    names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
@@ -126,9 +128,7 @@ for (i in 1:length(dat.selected)) {
                                    names(dat.selected[[i]])[len-1], 
                                    "+",
                                    names(dat.selected[[i]])[len], 
-                                   #"+ f(spatial, model=spdes[[", i, "]])"#, #Spatial model component
                                    "+ f(WayPt_ID, model = 'iid')"#, #Random intercept by waypoint site
-                                   #"+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
   )
   formulas$spatial[i] <- paste("y ~ -1 + ",
                                    names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
@@ -141,8 +141,6 @@ for (i in 1:length(dat.selected)) {
                                    "+",
                                    names(dat.selected[[i]])[len], 
                                    "+ f(spatial, model=spdes[[", i, "]])"#, #Spatial model component
-                                   #"+ f(WayPt_ID, model = 'iid')"#, #Random intercept by waypoint site
-                                   #"+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
   )
   formulas$temporal[i]<- paste("y ~ -1 + ",
                                    names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
@@ -154,8 +152,6 @@ for (i in 1:length(dat.selected)) {
                                    names(dat.selected[[i]])[len-1], 
                                    "+",
                                    names(dat.selected[[i]])[len], 
-                                   #"+ f(spatial, model=spdes[[", i, "]])"#, #Spatial model component
-                                   #"+ f(WayPt_ID, model = 'iid')"#, #Random intercept by waypoint site
                                    "+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
   )
   formulas$spatiotemporal[i] <- paste("y ~ -1 + ",
@@ -169,7 +165,6 @@ for (i in 1:length(dat.selected)) {
                                    "+",
                                    names(dat.selected[[i]])[len], 
                                    "+ f(spatial, model=spdes[[", i, "]])", #Spatial model component
-                                   #"+ f(WayPt_ID, model = 'iid')"#, #Random intercept by waypoint site
                                    "+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
   )
 }
@@ -241,7 +236,7 @@ rm(i,j,len,mod,temp,mod.templist)
 save.image()
 
 #TESTING AREA-----
-i.test <- 1
+i.test <- 2
 #Create mesh
   loc.test <- cbind(dat.selected[[i.test]]$Adj_X, dat.selected[[i.test]]$Adj_Y) 
   bnd.test <-inla.nonconvex.hull(loc.test) #Makes a nonconvex hull around the points
@@ -255,8 +250,8 @@ for(i in seq(0.5, 2.5, by=0.25)) {
 count.test = count.test + 1
   spde.test <- inla.spde2.pcmatern(
     mesh=mesh.test, alpha=2, ### mesh and smoothness parameter
-    prior.range=c(i, 0.05), ### P(range<0.5km)=0.05
-    prior.sigma=c(j, 0.05) ### P(sigma>0.5)=0.05
+    prior.range=c(0.5, 0.05), ### P(range<0.5km)=0.05
+    prior.sigma=c(7, 0.05) ### P(sigma>0.5)=0.05
   )
 
 #Create the projector matrix 
@@ -266,11 +261,11 @@ stack.test <- inla.stack(
   tag="Fit",
   data=list(y=ifelse(dat.selected[[i.test]]$MosqPerL == 0, NA, dat.selected[[i.test]]$MosqPerL)),
   A=list(A.test,1),
-  effects=list(list(spatial = 1:spde.test$n.spde), data.frame(dat.selected[[i.test]])
-               # cbind(dplyr::select(data.frame(dat.selected[[i.test]]), 1:(ncol(dat.selected[[i.test]]) - 5)), 
-               #       (dplyr::select(data.frame(dat.selected[[i.test]]), (ncol(dat.selected[[i.test]]) - 4):ncol(dat.selected[[i.test]])) %>%
-               #          mutate_if(is.numeric, scale))
-               # )
+  effects=list(list(spatial = 1:spde.test$n.spde), #data.frame(dat.selected[[i.test]])
+               cbind(dplyr::select(data.frame(dat.selected[[i.test]]), 1:(ncol(dat.selected[[i.test]]) - 5)),
+                     (dplyr::select(data.frame(dat.selected[[i.test]]), (ncol(dat.selected[[i.test]]) - 4):ncol(dat.selected[[i.test]])) %>%
+                        mutate_if(is.numeric, scale))
+               )
   )
 )
 
@@ -292,7 +287,7 @@ formula.test <- paste("y ~ -1 + ",
 
 
 inla.test <- inla(as.formula(formula.test),
-                  family="poisson",
+                  family="zeroinflated.nbinomial0",
                   data=inla.stack.data(stack.test),
                   control.predictor=list(compute=TRUE, A=inla.stack.A(stack.test), link = 1), 
                   control.inla=list(int.strategy='auto', correct = TRUE, correct.factor = 10),
@@ -312,7 +307,7 @@ PlotField2(field = w.test,
            mesh = mesh.test, 
            xlim = range(mesh.test$loc[,1]), 
            ylim = range(mesh.test$loc[,2]),
-           MyMain = paste(names(dat.selected)[i.test], "Test Model (Negative Binomial")
+           MyMain = paste(names(dat.selected)[i.test], "Test Model (Negative Binomial)")
 )
 axis(1); axis(2)
 points(x = km_loc[,1],
