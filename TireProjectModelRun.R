@@ -69,28 +69,29 @@ stacks.bin <- lapply(1:length(dat.selected), function (i) {
     tag="Fit",
     data=list(y=ifelse(dat.selected[[i]]$MosqPerL == 0, 0, 1)),
     A=list(As[[i]],1),
-    effects=list(list(spatial = 1:spdes[[i]]$n.spde), data.frame(dat.selected[[i]])
-                 # cbind(dplyr::select(data.frame(dat.selected[[i]]), 1:(ncol(dat.selected[[i]]) - 5)), 
-                 #       (dplyr::select(data.frame(dat.selected[[i]]), (ncol(dat.selected[[i]]) - 4):ncol(dat.selected[[i]])) %>%
-                 #         mutate_if(is.numeric, scale))
-                 #       )
+    effects=list(list(spatial = 1:spdes[[i]]$n.spde), # data.frame(dat.selected[[i]])
+                 cbind(dplyr::select(data.frame(dat.selected[[i]]), 1:(ncol(dat.selected[[i]]) - 5)),
+                       (dplyr::select(data.frame(dat.selected[[i]]), (ncol(dat.selected[[i]]) - 4):ncol(dat.selected[[i]])) %>%
+                         mutate_if(is.numeric, scale))
+                       )
       )
     )
   return(stack[[i]])
   }
 )
 
-stacks.gam <- lapply(1:length(dat.selected), function (i) {
+#Negative binomial stack, where we model the counts of positive outcomes
+stacks.nb <- lapply(1:length(dat.selected), function (i) {
   stack <- list()
   stack[[i]] <- inla.stack(
     tag="Fit",
     data=list(y=ifelse(dat.selected[[i]]$MosqPerL == 0, NA, dat.selected[[i]]$MosqPerL)),
     A=list(As[[i]],1),
-    effects=list(list(spatial = 1:spdes[[i]]$n.spde), data.frame(dat.selected[[i]])
-                 # cbind(dplyr::select(data.frame(dat.selected[[i]]), 1:(ncol(dat.selected[[i]]) - 5)), 
-                 #       (dplyr::select(data.frame(dat.selected[[i]]), (ncol(dat.selected[[i]]) - 4):ncol(dat.selected[[i]])) %>%
-                 #          mutate_if(is.numeric, scale))
-                 # )
+    effects=list(list(spatial = 1:spdes[[i]]$n.spde), #data.frame(dat.selected[[i]])
+                 cbind(dplyr::select(data.frame(dat.selected[[i]]), 1:(ncol(dat.selected[[i]]) - 5)),
+                       (dplyr::select(data.frame(dat.selected[[i]]), (ncol(dat.selected[[i]]) - 4):ncol(dat.selected[[i]])) %>%
+                          mutate_if(is.numeric, scale))
+                 )
     )
   )
   return(stack[[i]])
@@ -206,18 +207,18 @@ for(i in 1:length(dat.selected)) {
 }
 names(results.bin) <- splist
 
-#Run the gamma part of the models
-results.gam<- list()
+#Run the negative binomial part of the models
+results.nb<- list()
 for(i in 1:length(dat.selected)) {
   mod.templist <- list()
   for(j in 1:length(modlist)) {
     temp <- try(
               inla(as.formula(formulas[i,j]),
-                           family="gamma",
-                           data=inla.stack.data(stacks.gam[[i]]),
-                           control.predictor=list(compute=TRUE, A=inla.stack.A(stacks.gam[[i]]), link = 1), 
+                           family="zeroinflatednbinomial0",
+                           data=inla.stack.data(stacks.nb[[i]]),
+                           control.predictor=list(compute=TRUE, A=inla.stack.A(stacks.nb[[i]]), link = 1), 
                            control.inla=list(int.strategy='auto', correct = TRUE, correct.factor = 10),
-                           control.family=list(hyper = list(theta = prec.prior)), 
+                           control.family=list(hyper = list(prec.prior)), 
                            control.compute=list(dic=TRUE,cpo=TRUE, waic=TRUE,po=TRUE,config=TRUE),
                            control.fixed=list(expand.factor.strategy ='inla'),
                            verbose = F)
@@ -230,9 +231,9 @@ for(i in 1:length(dat.selected)) {
             mod.templist[[j]] <- temp
   }
   names(mod.templist) = modlist
-  results.gam[[i]] <- mod.templist
+  results.nb[[i]] <- mod.templist
 }
-names(results.gam) <- splist
+names(results.nb) <- splist
 
 #Clean up environment
 rm(i,j,len,mod,temp,mod.templist)
@@ -291,7 +292,7 @@ formula.test <- paste("y ~ -1 + ",
 
 
 inla.test <- inla(as.formula(formula.test),
-                  family="gamma",
+                  family="poisson",
                   data=inla.stack.data(stack.test),
                   control.predictor=list(compute=TRUE, A=inla.stack.A(stack.test), link = 1), 
                   control.inla=list(int.strategy='auto', correct = TRUE, correct.factor = 10),
@@ -311,7 +312,7 @@ PlotField2(field = w.test,
            mesh = mesh.test, 
            xlim = range(mesh.test$loc[,1]), 
            ylim = range(mesh.test$loc[,2]),
-           MyMain = paste(names(dat.selected)[i.test], "Test Model (Gamma)")
+           MyMain = paste(names(dat.selected)[i.test], "Test Model (Negative Binomial")
 )
 axis(1); axis(2)
 points(x = km_loc[,1],
