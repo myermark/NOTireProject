@@ -23,6 +23,7 @@ library(gstat)
 library(tigris)
 library(formattable)
 library(dplyr)
+source("/Volumes/Mark Drive/Papers and Textbooks/Highstat Guide to INLA/HighstatLibV11.R") #Remember to cite these helper functions from Highstat
 
 #Import data---- 
 #Import data
@@ -57,6 +58,31 @@ map + geom_point(data = loc, pch=21, stroke = 1, aes(x=long, y= lat))  +
         axis.title.y = element_text(color = "black", size = 14, face = "bold"), 
         plot.title = element_text(size=20, face = "bold"))
 
+#Plot each species' counts by week 
+for(n in 1:length(splist)) {
+  temp <- filter(tire_fulldat, MosqSpp == splist[n])
+  tiff(filename=paste0("./Figures/", temp$MosqSpp[1], "_CountByWeek.tiff"), width = 5, height = 4, units = "in", compression = "lzw", type = "cairo", res = 300)
+  plot(temp$EpiWeek, temp$MosqPerL, ylim =c(0, max(tire_fulldat$MosqPerL)),
+       pch=16, xlab = "Week", ylab = "Larvae Per Liter", main = temp$MosqSpp[1])
+  dev.off()
+}
+rm(temp)
+
+#Determine the relative count of each species captured 
+#In total
+spp_totals <- tire_fulldat %>% group_by(MosqSpp) %>% summarise(total = sum(MosqCount))
+tiff(filename="./Figures/YearlyTotals.tiff", width = 10, height = 8, units = "in", compression = "lzw", type = "cairo", res = 300)
+barplot(total ~ fct_reorder(MosqSpp, total, .desc=TRUE), data = spp_totals, 
+        ylim = c(0, 5000), ylab = "Mosquito Larvae", xlab = "", main = "Yearly Total")
+dev.off()
+
+#By week
+tiff(filename="./Figures/WeeklyTotals.tiff", width = 5, height = 4, units = "in", compression = "lzw", type = "cairo", res = 300)
+ggplot(tire_fulldat %>% group_by(MosqSpp, EpiWeek) %>% summarise(total = sum(MosqPerL)), aes(x = EpiWeek, y = total, colour=MosqSpp)) + 
+  geom_point(pch = 16, size = 2) + 
+  labs(title = "Total by Week", x = "Week", y = "Larvae Per Liter", colour = "Species") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
+dev.off()
 #Plot the relative mosquito counts per tire sample site
 for(i in 1:length(dat.selected)) {
   temp  <- dflist[[i]] %>% group_by(WayPt_ID) %>% summarize(LatY = mean(LatY, na.rm=T), LongX = mean(LongX, na.rm=T), MosqCount = sum(MosqCount, na.rm=T))
@@ -72,16 +98,21 @@ for(i in 1:length(dat.selected)) {
   )
   #dev.off()
 }
+
 #Check the distribution of responses to determine link function for GLMM (if any)
 #All responses
-lapply(1:length(dat.selected), function(i){
-  hist(dat.selected[[i]]$MosqPerL, main=paste(names(dat.selected)[i], "All Responses"), xlab = "Mosquito Larvae Per Liter")
-})
+for(i in 1:length(dat.selected)) {
+  tiff(filename = paste0("./Figures/Response Distributions/", names(dat.selected)[i], "WithZeroes.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+  plot(table(dat.selected[[i]]$MosqPerL), main=paste(names(dat.selected)[i], "All Responses"), xlab = "Mosquito Larvae Per Liter", ylab = "Times Occurring")
+  dev.off()
+}
 #Zero-excluded
-lapply(1:length(dat.selected), function(i){
+for(i in 1:length(dat.selected)) {
   x = filter(dat.selected[[i]], MosqPerL != 0)
-  hist(x$MosqPerL, main=paste(names(dat.selected)[i], "Zeroes Excluded"), xlab = "Mosquito Larvae Per Liter")
-})
+  tiff(filename = paste0("./Figures/Response Distributions/", names(dat.selected)[i], "ZeroesExcluded.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+  plot(table(x$MosqPerL), main=paste(names(dat.selected)[i], "Zeroes Excluded"), xlab = "Mosquito Larvae Per Liter", ylab = "Times Occurring")
+  dev.off()  
+}
 
 #Determine the percentage of zero responses by species
 zero.counts <- data.frame(species = splist, zeroes = rep(NA, times = length(splist)), percent.zero =  rep(NA, times = length(splist)))
@@ -93,6 +124,25 @@ for(i in 1:length(dat.selected)) {
 
 formattable(zero.counts, align =c("l", rep("r", ncol(zero.counts) - 1)))
 
+#Plot the response vs. each predictor variable by species
+for(i in 1:length(dat.selected)) {
+len <- length(dat.selected[[i]])
+covars <- c(names(dat.selected[[i]])[len-4], 
+               names(dat.selected[[i]])[len-3], 
+               names(dat.selected[[i]])[len-2], 
+               names(dat.selected[[i]])[len-1], 
+               names(dat.selected[[i]])[len])
+tiff(filename = paste0("./Figures/Variable Plots/", names(dat.selected)[i], "VarScatterplot.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+MyMultipanel.ggp2(Z = dat.selected[[i]], 
+                  varx = covars, 
+                  vary = "MosqPerL", 
+                  ylab = "Mosquito Larvae Per Liter",
+                  main = names(dat.selected)[i],
+                  addSmoother = FALSE,
+                  addRegressionLine = FALSE,
+                  addHorizontalLine = FALSE)
+dev.off()
+}
 #Define the nonspatial GLM model formulas
 nonspatial.formulas <- lapply(1:length(dat.selected), function(i) {
   formula <- list()
