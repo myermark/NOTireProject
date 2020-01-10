@@ -16,14 +16,15 @@ library(rgdal)
 library(sf)
 library(sp)
 library(ggmap)
-library(plyr)
-library(dplyr)
 library(raster)
 library(gstat)
 library(tigris)
+library(plyr)
+library(dplyr)
 
 #Load data----
 load(".Rdata")
+dat.selected <- readRDS(file = "Mosquito_Variables_Selected.rds")
 
 #Perform model evaluation and validation
 #Compare by cpo check, WAIC and log-likelihood for each model by species

@@ -12,7 +12,6 @@
 
 #Load packages
 library(raster)
-library(dplyr)
 library(forcats)
 library(ggplot2)
 library(readr)
@@ -20,6 +19,8 @@ library(readxl)
 library(tidyr)
 library(sp)
 library(rgdal)
+library(dplyr)
+source("/Volumes/Mark Drive/Papers and Textbooks/Highstat Guide to INLA/HighstatLibV11.R") #Remember to cite these helper functions from Highstat
 
 #Import data
 tire_rawdat <- read_excel("MMEdit_Tire_Data_ELC_Updated_Nov20_2019.xlsx") %>% mutate(MosqCount = as.numeric(MosqCount))
@@ -53,6 +54,84 @@ tire_fulldat <- data.frame(tire_fulldat)
 #Make epiweek start at 1 for INLA
 tire_fulldat$INLAWeek <- tire_fulldat$EpiWeek - (min(tire_fulldat$EpiWeek) -1)
 
+#Convert the land cover variables to fractions of the total buffer area
+radius = 2 #2km
+buffer_area = pi * radius^2
+tire_fulldat <- tire_fulldat %>% mutate(Open.Water = Open.Water / buffer_area,
+                                        Developed.Open.Space = Developed.Open.Space / buffer_area,
+                                        Developed.Low.Intensity = Developed.Low.Intensity / buffer_area,
+                                        Developed.Medium.Intensity = Developed.Medium.Intensity / buffer_area,
+                                        Developed.High.Intensity = Developed.High.Intensity / buffer_area,
+                                        Barren.Land = Barren.Land / buffer_area,
+                                        Deciduous.Forest = Deciduous.Forest / buffer_area, 
+                                        Shrub.Scrub = Shrub.Scrub / buffer_area, 
+                                        Grassland.Herbaceous = Grassland.Herbaceous / buffer_area, 
+                                        Pasture.Hay = Pasture.Hay/ buffer_area, 
+                                        Cultivated.Crops = Cultivated.Crops/ buffer_area, 
+                                        Woody.Wetlands = Woody.Wetlands/ buffer_area, 
+                                        Emergent.Herbaceous.Wetlands = Emergent.Herbaceous.Wetlands/ buffer_area)
+
+#Combine the detritus types into organic/nonorganic
+tire_fulldat <- tire_fulldat %>% mutate(org_debris = seeds + sticks + leaf + algae_moss + shells + grass, 
+                                        inorg_debris = rubber + man.made + rocks)
+
+#Change the factor variables to 0/1 rather than y/n
+tire_fulldat <- tire_fulldat %>% mutate(veg_in_tire = ifelse(veg_in_tire == "y", 1, 0),
+                                        cop = ifelse(cop == "y", 1, 0), 
+                                        ostra = ifelse(ostra == "y", 1, 0),
+                                        daph = ifelse(daph == "y", 1, 0))  %>% 
+                                 mutate(veg_in_tire = factor(veg_in_tire ),
+                                        cop = factor(cop), 
+                                        ostra = factor(ostra),
+                                        daph = factor(daph)) 
+  
+
+#Change the name of the veg cover variable to eliminate the trailing period
+tire_fulldat <- tire_fulldat %>% mutate(veg_cover = veg_cover.) %>% dplyr::select(-c(veg_cover.))
+
+#Change the order of variables so dependent vars are at the end of the dataset
+tire_fulldat <- tire_fulldat %>% dplyr::select(MosqPerL, WayPt_ID, LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, INLAWeek, MosqCount, everything())
+
+#Remove variables from consideration that we are entirely uninterested in, or are derivatives of others, or researcher aid info that is not intended as covariate
+tire_fulldat <- tire_fulldat %>% dplyr::select(-c(Address, 
+                                           Sampledtire, 
+                                           water_L, 
+                                           no_cover, 
+                                           open., 
+                                           w_cover, 
+                                           seeds, 
+                                           sticks, 
+                                           leaf, 
+                                           algae_moss, 
+                                           shells, 
+                                           grass, 
+                                           rubber, 
+                                           man.made, 
+                                           rocks, 
+                                           Buffer, 
+                                           Area_km2, 
+                                           Barren.Land,
+                                           Deciduous.Forest, 
+                                           Shrub.Scrub, 
+                                           Grassland.Herbaceous, 
+                                           Pasture.Hay, 
+                                           Cultivated.Crops, 
+                                           PovPast12M, 
+                                           Unemp, 
+                                           Employed, 
+                                           NoSchool, 
+                                           SomeColleg, 
+                                           AssDegree, 
+                                           Bachelors, 
+                                           Masters, 
+                                           PhD, 
+                                           ProfDegree, 
+                                           Rented_Unocupied, 
+                                           SoldUnocup, 
+                                           OtherVacan))
+
+
 #Save the modified data
 write.csv(tire_fulldat, file="TireData121219.csv")
+
 

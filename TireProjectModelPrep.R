@@ -83,6 +83,7 @@ ggplot(tire_fulldat %>% group_by(MosqSpp, EpiWeek) %>% summarise(total = sum(Mos
   labs(title = "Total by Week", x = "Week", y = "Larvae Per Liter", colour = "Species") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
 dev.off()
+
 #Plot the relative mosquito counts per tire sample site
 for(i in 1:length(dat.selected)) {
   temp  <- dflist[[i]] %>% group_by(WayPt_ID) %>% summarize(LatY = mean(LatY, na.rm=T), LongX = mean(LongX, na.rm=T), MosqCount = sum(MosqCount, na.rm=T))
@@ -209,5 +210,5 @@ for (i in 1:length(dat.selected)) {
 }
 
 #Save environment for later loading by the modeling script
-rm(D, i, variograms, plot.vario, temp, loc, map, nola_stamen)
+rm(D, i, variograms, plot.vario, lo, covars, len, xl, loc, map, nola_stamen)
 save.image()

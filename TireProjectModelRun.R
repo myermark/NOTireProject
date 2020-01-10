@@ -17,11 +17,10 @@ library(rgdal)
 library(sf)
 library(sp)
 library(ggmap)
-library(dplyr)
 library(raster)
 library(gstat)
 library(tigris)
-
+library(dplyr)
 
 #Import data---- 
 load(".Rdata")
@@ -103,67 +102,67 @@ stacks.nb <- lapply(1:length(dat.selected), function (i) {
 }
 )
 
-#Define the INLA formulas
+#Write the formulas
 formulas <- data.frame(nonspatial = rep(NA, times = 7), randint = rep(NA, times = 7), spatial = rep(NA, times = 7), temporal = rep(NA, times = 7), spatiotemporal = rep(NA, times = 7))
 for (i in 1:length(dat.selected)) {
   len <- length(dat.selected[[i]])
   formulas$nonspatial[i] <- paste("y ~ -1 + ",
                         names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
                         "+",
-                        names(dat.selected[[i]])[len-3], 
+                        names(dat.selected[[i]])[len-3],
                         "+",
-                        names(dat.selected[[i]])[len-2], 
+                        names(dat.selected[[i]])[len-2],
                         "+",
-                        names(dat.selected[[i]])[len-1], 
+                        names(dat.selected[[i]])[len-1],
                         "+",
-                        names(dat.selected[[i]])[len] 
+                        names(dat.selected[[i]])[len]
   )
   formulas$randint[i]<- paste("y ~ -1 + ",
                                    names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
                                    "+",
-                                   names(dat.selected[[i]])[len-3], 
+                                   names(dat.selected[[i]])[len-3],
                                    "+",
-                                   names(dat.selected[[i]])[len-2], 
+                                   names(dat.selected[[i]])[len-2],
                                    "+",
-                                   names(dat.selected[[i]])[len-1], 
+                                   names(dat.selected[[i]])[len-1],
                                    "+",
-                                   names(dat.selected[[i]])[len], 
+                                   names(dat.selected[[i]])[len],
                                    "+ f(WayPt_ID, model = 'iid')"#, #Random intercept by waypoint site
   )
   formulas$spatial[i] <- paste("y ~ -1 + ",
                                    names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
                                    "+",
-                                   names(dat.selected[[i]])[len-3], 
+                                   names(dat.selected[[i]])[len-3],
                                    "+",
-                                   names(dat.selected[[i]])[len-2], 
+                                   names(dat.selected[[i]])[len-2],
                                    "+",
-                                   names(dat.selected[[i]])[len-1], 
+                                   names(dat.selected[[i]])[len-1],
                                    "+",
-                                   names(dat.selected[[i]])[len], 
+                                   names(dat.selected[[i]])[len],
                                    "+ f(spatial, model=spdes[[", i, "]])"#, #Spatial model component
   )
   formulas$temporal[i]<- paste("y ~ -1 + ",
                                    names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
                                    "+",
-                                   names(dat.selected[[i]])[len-3], 
+                                   names(dat.selected[[i]])[len-3],
                                    "+",
-                                   names(dat.selected[[i]])[len-2], 
+                                   names(dat.selected[[i]])[len-2],
                                    "+",
-                                   names(dat.selected[[i]])[len-1], 
+                                   names(dat.selected[[i]])[len-1],
                                    "+",
-                                   names(dat.selected[[i]])[len], 
+                                   names(dat.selected[[i]])[len],
                                    "+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
   )
   formulas$spatiotemporal[i] <- paste("y ~ -1 + ",
                                    names(dat.selected[[i]])[len-4], #This pastes the last 5 variable names together into the formula
                                    "+",
-                                   names(dat.selected[[i]])[len-3], 
+                                   names(dat.selected[[i]])[len-3],
                                    "+",
-                                   names(dat.selected[[i]])[len-2], 
+                                   names(dat.selected[[i]])[len-2],
                                    "+",
-                                   names(dat.selected[[i]])[len-1], 
+                                   names(dat.selected[[i]])[len-1],
                                    "+",
-                                   names(dat.selected[[i]])[len], 
+                                   names(dat.selected[[i]])[len],
                                    "+ f(spatial, model=spdes[[", i, "]])", #Spatial model component
                                    "+ f(INLAWeek, model = 'ar1', hyper = list(theta1=list(prior='pc.prec', param=c(0.5,0.5)), theta2=list(prior='pc.cor1', param=c(0.9,0.9))))" #Temporal model component
   )
@@ -171,8 +170,8 @@ for (i in 1:length(dat.selected)) {
 #Name the models
 modlist <- c("Nonspatial", "Randint", "Spatial", "Temporal", "Spatiotemporal")
 
-#Define prior for precision
-prec.prior <- list(prior='pc.prec', param=c(0.5, 0.5))
+#Define priors
+pi.prior <- list(theta = list(initial = -10, fixed = TRUE)) #This fixes the zero-inflation parameter at 0 and is a trick to give us a zero-truncated NB distribution
 
 #Run the binomial part of the models
 results.bin<- list()
@@ -213,7 +212,7 @@ for(i in 1:length(dat.selected)) {
                            data=inla.stack.data(stacks.nb[[i]]),
                            control.predictor=list(compute=TRUE, A=inla.stack.A(stacks.nb[[i]]), link = 1), 
                            control.inla=list(int.strategy='auto', correct = TRUE, correct.factor = 10),
-                           control.family=list(hyper = list(prec.prior)), 
+                           control.family=list(hyper = list(pi.prior)), 
                            control.compute=list(dic=TRUE,cpo=TRUE, waic=TRUE,po=TRUE,config=TRUE),
                            control.fixed=list(expand.factor.strategy ='inla'),
                            verbose = F)
@@ -235,7 +234,7 @@ rm(i,j,len,mod,temp,mod.templist)
 #Save image for model evaluation
 save.image()
 
-#TESTING AREA-----
+#TESTING AREA (NOT RUN)----- 
 i.test <- 2
 #Create mesh
   loc.test <- cbind(dat.selected[[i.test]]$Adj_X, dat.selected[[i.test]]$Adj_Y) 
