@@ -1,4 +1,5 @@
 "","species","type","model","cpo","waic","loglik"
+<<<<<<< HEAD
 "1","A. aeg","Occurrence","Nonspatial",0,117.46084,-77.72244
 "2","A. aeg","Occurrence","Randint",51.89,110.74863,-78.31864
 "3","A. aeg","Occurrence","Spatial",19.19,53.92443,-52.53921
@@ -69,3 +70,40 @@
 "68","Cx. salinarius","Abundance","Spatial",0,114.28035,-81.12741
 "69","Cx. salinarius","Abundance","Temporal",0,111.36852,-81.28369
 "70","Cx. salinarius","Abundance","Spatiotemporal",0,110.83346,-81.04753
+=======
+"1","A. aeg","Abundance","Nonspatial",0.48,149.51962,-96.3894
+"2","A. aeg","Abundance","Randint",0.35,149.82325,-96.66846
+"3","A. aeg","Abundance","Spatial",0.25,150.02029,-96.82272
+"4","A. aeg","Abundance","Temporal",0.29,150.19436,-96.80709
+"5","A. aeg","Abundance","Spatiotemporal",0.27,150.22525,-96.99354
+"6","A. albo","Abundance","Nonspatial",1.72,671.74532,-422.56568
+"7","A. albo","Abundance","Randint",5.27,608.04736,-373.38217
+"8","A. albo","Abundance","Spatial",2.88,614.62804,-344.84984
+"9","A. albo","Abundance","Temporal",3.21,610.40061,-342.52293
+"10","A. albo","Abundance","Spatiotemporal",2.86,604.36043,-342.32819
+"11","A. crucians","Abundance","Nonspatial",0,40.07186,-34.89927
+"12","A. crucians","Abundance","Randint",0.9,40.19121,-34.53153
+"13","A. crucians","Abundance","Spatial",1.16,39.42813,-34.34893
+"14","A. crucians","Abundance","Temporal",0.88,40.13405,-33.52969
+"15","A. crucians","Abundance","Spatiotemporal",1.4,39.60362,-34.59486
+"16","Cx. nigripalpus","Abundance","Nonspatial",0.05,1.97988,-32.28133
+"17","Cx. nigripalpus","Abundance","Randint",0,1.96514,-32.56154
+"18","Cx. nigripalpus","Abundance","Spatial",0,-Inf,-3.96594
+"19","Cx. nigripalpus","Abundance","Temporal",0,1.76524,-56.05697
+"20","Cx. nigripalpus","Abundance","Spatiotemporal",0,1.67482,-53.43575
+"21","Cx. quinq","Abundance","Nonspatial",1.32,421.65962,-273.16172
+"22","Cx. quinq","Abundance","Randint",4.47,361.89433,-239.03084
+"23","Cx. quinq","Abundance","Spatial",4.09,380.30472,-229.12912
+"24","Cx. quinq","Abundance","Temporal",3.36,380.54278,-228.37284
+"25","Cx. quinq","Abundance","Spatiotemporal",4.14,378.33879,-227.61351
+"26","Cx. restuans","Abundance","Nonspatial",0.67,130.05822,-86.1887
+"27","Cx. restuans","Abundance","Randint",0.48,130.30644,-86.5319
+"28","Cx. restuans","Abundance","Spatial",0.71,129.98473,-86.32172
+"29","Cx. restuans","Abundance","Temporal",0.67,130.21415,-86.58744
+"30","Cx. restuans","Abundance","Spatiotemporal",0.81,129.91614,-86.49816
+"31","Cx. salinarius","Abundance","Nonspatial",0,116.43978,-84.37448
+"32","Cx. salinarius","Abundance","Randint",0,116.71088,-84.65215
+"33","Cx. salinarius","Abundance","Spatial",0,114.3455,-84.52932
+"34","Cx. salinarius","Abundance","Temporal",0,111.38708,-84.69581
+"35","Cx. salinarius","Abundance","Spatiotemporal",0,110.92013,-84.49174
+>>>>>>> e7d7cf6dc2ed7bb1703f2a1455d8b3eade273db1

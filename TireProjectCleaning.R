@@ -20,7 +20,10 @@ library(tidyr)
 library(sp)
 library(rgdal)
 library(dplyr)
+<<<<<<< HEAD
 source("/Volumes/Mark Drive/Papers and Textbooks/Highstat Guide to INLA/HighstatLibV11.R") #Remember to cite these helper functions from Highstat
+=======
+>>>>>>> e7d7cf6dc2ed7bb1703f2a1455d8b3eade273db1
 
 #Import data
 tire_rawdat <- read_excel("MMEdit_Tire_Data_ELC_Updated_Nov20_2019.xlsx") %>% mutate(MosqCount = as.numeric(MosqCount))
@@ -55,6 +58,7 @@ tire_fulldat <- data.frame(tire_fulldat)
 tire_fulldat$INLAWeek <- tire_fulldat$EpiWeek - (min(tire_fulldat$EpiWeek) -1)
 
 #Convert the land cover variables to fractions of the total buffer area
+<<<<<<< HEAD
 radius = 2 #2km
 buffer_area = pi * radius^2
 tire_fulldat <- tire_fulldat %>% mutate(Open.Water = Open.Water / buffer_area,
@@ -70,6 +74,21 @@ tire_fulldat <- tire_fulldat %>% mutate(Open.Water = Open.Water / buffer_area,
                                         Cultivated.Crops = Cultivated.Crops/ buffer_area, 
                                         Woody.Wetlands = Woody.Wetlands/ buffer_area, 
                                         Emergent.Herbaceous.Wetlands = Emergent.Herbaceous.Wetlands/ buffer_area)
+=======
+tire_fulldat <- tire_fulldat %>% mutate(Open.Water = Open.Water / Area_km2,
+                                        Developed.Open.Space = Developed.Open.Space / Area_km2,
+                                        Developed.Low.Intensity = Developed.Low.Intensity / Area_km2,
+                                        Developed.Medium.Intensity = Developed.Medium.Intensity / Area_km2,
+                                        Developed.High.Intensity = Developed.High.Intensity / Area_km2,
+                                        Barren.Land = Barren.Land / Area_km2,
+                                        Deciduous.Forest = Deciduous.Forest / Area_km2, 
+                                        Shrub.Scrub = Shrub.Scrub / Area_km2, 
+                                        Grassland.Herbaceous = Grassland.Herbaceous / Area_km2, 
+                                        Pasture.Hay = Pasture.Hay/ Area_km2, 
+                                        Cultivated.Crops = Cultivated.Crops/ Area_km2, 
+                                        Woody.Wetlands = Woody.Wetlands/ Area_km2, 
+                                        Emergent.Herbaceous.Wetlands = Emergent.Herbaceous.Wetlands/ Area_km2)
+>>>>>>> e7d7cf6dc2ed7bb1703f2a1455d8b3eade273db1
 
 #Combine the detritus types into organic/nonorganic
 tire_fulldat <- tire_fulldat %>% mutate(org_debris = seeds + sticks + leaf + algae_moss + shells + grass, 
@@ -130,7 +149,10 @@ tire_fulldat <- tire_fulldat %>% dplyr::select(-c(Address,
                                            SoldUnocup, 
                                            OtherVacan))
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> e7d7cf6dc2ed7bb1703f2a1455d8b3eade273db1
 #Save the modified data
 write.csv(tire_fulldat, file="TireData121219.csv")
 
