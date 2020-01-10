@@ -209,5 +209,5 @@ for (i in 1:length(dat.selected)) {
 }
 
 #Save environment for later loading by the modeling script
-rm(D, i, variograms, plot.vario, temp, loc, map, nola_stamen)
+rm(D, i, variograms, plot.vario, lo, covars, len, xl, loc, map, nola_stamen)
 save.image()
