@@ -62,7 +62,7 @@ dflist.remove[[n]] <- findCorrelation(cor(dplyr::select(dflist.num[[n]], -c(Mosq
 }
 names(dflist.remove) = splist
 
-#Remove correlated variables, leaving the one from each pair that has the lowest mean absolute correlation
+#Remove correlated variables, leaving one from each pair that is the least correlated with other variables in the dataset
 dflist.reduced <- list()
 for (n in 1:length(dflist.remove)) {
   dflist.reduced[[n]] <-dplyr::select(dflist.num[[n]], -c(dflist.remove[[n]])) #%>%
@@ -72,7 +72,6 @@ names(dflist.reduced) = splist
 
 #Eliminate more variables using Variance Inflation Factors 
 for(i in 1:length(dflist.reduced)) {
-<<<<<<< HEAD
 dplyr::select_if(dflist.reduced[[i]], is.numeric) %>% dplyr::select(-c(MosqPerL, WayPt_ID, LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, INLAWeek, MosqCount)) %>% corvif()
 }
 
@@ -82,13 +81,6 @@ colSums(tire_fulldat == 0) / nrow(tire_fulldat)
 
 for(i in 1:length(dflist.reduced)) {
   dflist.reduced[[i]] <- dplyr::select(dflist.reduced[[i]], -c(Developed.Medium.Intensity, Emergent.Herbaceous.Wetlands, oligo, noto, tris, dyticid))
-=======
-dplyr::select_if(dflist.reduced[[i]], is.numeric) %>% select(-c(MosqPerL, WayPt_ID, LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, INLAWeek, MosqCount)) %>% corvif()
-}
-
-for(i in 1:length(dflist.reduced)) {
-  dflist.reduced[[i]] <- select(dflist.reduced[[i]], -c(Developed.Medium.Intensity, Emergent.Herbaceous.Wetlands))
->>>>>>> e7d7cf6dc2ed7bb1703f2a1455d8b3eade273db1
 }
 
 
@@ -96,11 +88,7 @@ for(i in 1:length(dflist.reduced)) {
 bvs.list <- list()
 bvs.vars <- list()
 for (n in 1:length(dflist.reduced)) {
-<<<<<<< HEAD
 bvs.list[[n]] <- Bvs(MosqPerL ~ . , data = dplyr::select(dflist.reduced[[n]], -c(WayPt_ID, LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, INLAWeek, MosqCount)), time.test=F)
-=======
-bvs.list[[n]] <- GibbsBvs(MosqPerL ~ . , data = dplyr::select(dflist.reduced[[n]], -c(WayPt_ID, LongX, LatY, Adj_X, Adj_Y, Day, Month, EpiWeek, INLAWeek, MosqCount)), time.test=F)
->>>>>>> e7d7cf6dc2ed7bb1703f2a1455d8b3eade273db1
 bvs.vars[[n]] <- bvs.list[[n]]$inclprob[order(bvs.list[[n]]$inclprob, decreasing=T)]
 }
 names(bvs.list) = splist

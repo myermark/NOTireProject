@@ -171,10 +171,6 @@ for (i in 1:length(dat.selected)) {
 modlist <- c("Nonspatial", "Randint", "Spatial", "Temporal", "Spatiotemporal")
 
 #Define priors
-<<<<<<< HEAD
-=======
-prec.prior <- list(prior='pc.prec', param=c(0.5, 0.5)) #Generic prior for precision
->>>>>>> e7d7cf6dc2ed7bb1703f2a1455d8b3eade273db1
 pi.prior <- list(theta = list(initial = -10, fixed = TRUE)) #This fixes the zero-inflation parameter at 0 and is a trick to give us a zero-truncated NB distribution
 
 #Run the binomial part of the models
