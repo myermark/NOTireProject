@@ -167,7 +167,7 @@ lapply(1:length(dat.selected), function (i) {
   #Plot binomial models
   tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Occurrence.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
   tryCatch({
-    w.bin <- results.bin[[i]]$Spatial$summary.random$spatial$mean
+    w.bin <- results.bin[[i]]$Spatiotemporal$summary.random$spatial$mean
     PlotField2(field = w.bin, 
                mesh = meshes[[i]], 
                xlim = range(meshes[[i]]$loc[,1]), 
@@ -187,7 +187,7 @@ lapply(1:length(dat.selected), function (i) {
   #Plot Negative Binomial models
   tiff(filename = paste0("./Figures/Spatial/", names(dat.selected)[i], " Abundance.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
   tryCatch({
-    w.nb <- results.nb[[i]]$Spatial$summary.random$spatial$mean
+    w.nb <- results.nb[[i]]$Spatiotemporal$summary.random$spatial$mean
     PlotField2(field = w.nb, 
                mesh = meshes[[i]], 
                xlim = range(meshes[[i]]$loc[,1]), 
@@ -202,6 +202,33 @@ lapply(1:length(dat.selected), function (i) {
            pch = 16)
     plot(nola_roads, add=T, lwd = 0.75)
     plot(border_km, add=T)
+    dev.off()
+  }, error = function(e) print("Error"))
+})
+
+#Plot temporal effects 
+lapply(1:length(dat.selected), function (i) {
+  tiff(filename = paste0("./Figures/Temporal/", names(dat.selected)[i], " Occurrence.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+  tryCatch({
+    weekeffect.bin <- results.bin[[i]]$Spatiotemporal$summary.random$INLAWeek
+    plot(cbind(weekeffect.bin[,1] + min(dat.selected[[i]]$EpiWeek) - 1, weekeffect.bin[,2]),
+               type = "l",
+               xlab = "EpiWeek", 
+               ylab = "Temporal coefficient",
+               main = paste(names(dat.selected)[i], "Occurrence Model")
+    )
+    dev.off()
+  }, error = function(e) print("Error"))
+  
+  tiff(filename = paste0("./Figures/Temporal/", names(dat.selected)[i], " Abundance.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+  tryCatch({
+    weekeffect.nb <- results.nb[[i]]$Spatiotemporal$summary.random$INLAWeek
+    plot(cbind(weekeffect.nb[,1] + min(dat.selected[[i]]$EpiWeek) - 1, weekeffect.nb[,2]),
+         type = "l",
+         xlab = "EpiWeek", 
+         ylab = "Temporal coefficient",
+         main = paste(names(dat.selected)[i], "Abundance Model")
+    )
     dev.off()
   }, error = function(e) print("Error"))
 })
