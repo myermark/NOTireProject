@@ -75,7 +75,7 @@ tire_fulldat <- tire_fulldat %>% mutate(Open.Water = Open.Water / buffer_area,
 
 
 #Combine the detritus types into organic/nonorganic
-tire_fulldat <- tire_fulldat %>% mutate(org_debris = seeds + sticks + leaf + algae_moss + shells + grass, 
+tire_fulldat <- tire_fulldat %>% mutate(org_debris = seeds + sticks + leaf + algae_moss + shells + grass + inverts, 
                                         inorg_debris = rubber + man.made + rocks)
 
 #Change the factor variables to 0/1 rather than y/n
@@ -108,6 +108,7 @@ tire_fulldat <- tire_fulldat %>% dplyr::select(-c(Address,
                                            algae_moss, 
                                            shells, 
                                            grass, 
+                                           inverts,
                                            rubber, 
                                            man.made, 
                                            rocks, 

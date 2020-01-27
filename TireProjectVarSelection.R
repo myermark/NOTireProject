@@ -80,7 +80,7 @@ colSums(tire_fulldat == 0) / nrow(tire_fulldat)
 #Oligo, tris, noto, dycitid are all 95% zero or more. 
 
 for(i in 1:length(dflist.reduced)) {
-  dflist.reduced[[i]] <- dplyr::select(dflist.reduced[[i]], -c(Developed.Medium.Intensity, Emergent.Herbaceous.Wetlands, oligo, noto, tris, dyticid))
+  dflist.reduced[[i]] <- dplyr::select(dflist.reduced[[i]], -c(Emergent.Herbaceous.Wetlands, oligo, noto, tris, dyticid))
 }
 
 
