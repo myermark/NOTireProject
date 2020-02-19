@@ -3,7 +3,7 @@
 #
 # Author: Mark Myer
 #
-# Date: 12/11/2019
+# Date: 2/19/2020
 #
 # Purpose: To import and clean tire project data for analysis. 
 #
@@ -25,7 +25,7 @@ source("/Volumes/Mark Drive/Papers and Textbooks/Highstat Guide to INLA/Highstat
 
 
 #Import data
-tire_rawdat <- read_excel("MMEdit_Tire_Data_ELC_Updated_Nov20_2019.xlsx") %>% mutate(MosqCount = as.numeric(MosqCount))
+tire_rawdat <- read_excel("MMEdit_Tire_Data_ELC_Updated_Feb19_2020.xlsx") %>% mutate(MosqCount = as.numeric(MosqCount))
 tiresite_vars <- read_excel("MMEdit_Tire_Data_ELC_Updated_Nov20_2019.xlsx", sheet = 3)
 
 #The names of latitude and longitude are reversed. Need to fix. 
@@ -135,6 +135,6 @@ tire_fulldat <- tire_fulldat %>% dplyr::select(-c(Address,
                                            OtherVacan))
 
 #Save the modified data
-write.csv(tire_fulldat, file="TireData121219.csv")
+write.csv(tire_fulldat, file="TireData021920.csv")
 
 

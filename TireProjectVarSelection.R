@@ -3,7 +3,7 @@
 #
 # Author: Mark Myer
 #
-# Date: 12/12/2019
+# Date: 2/19/2020
 #
 # Purpose: To select predictor variables for mosquito larvae modeling in tires
 #
@@ -22,7 +22,7 @@ library(dplyr)
 source("/Volumes/Mark Drive/Papers and Textbooks/Highstat Guide to INLA/HighstatLibV11.R") #Remember to cite these helper functions from Highstat
 
 #Import data
-tire_fulldat <- read.csv("TireData121219.csv") %>% dplyr::select(., -c(X, DispX, DispY, comments, optional)) %>% na.omit()
+tire_fulldat <- read.csv("TireData021920.csv") %>% dplyr::select(., -c(X, DispX, DispY, comments, optional)) %>% na.omit()
 
 #Separate dataset into dataframes by species (maybe not necessary)
 splist <- unique(tire_fulldat$MosqSpp)

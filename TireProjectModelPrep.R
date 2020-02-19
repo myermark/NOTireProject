@@ -3,7 +3,7 @@
 #
 # Author: Mark Myer
 #
-# Date: 1/7/2020
+# Date: 2/19/2020
 #
 # Purpose: To create models for mosquito larvae modeling in tires
 #
@@ -27,7 +27,7 @@ source("/Volumes/Mark Drive/Papers and Textbooks/Highstat Guide to INLA/Highstat
 
 #Import data---- 
 #Import data
-tire_fulldat <- read.csv("TireData121219.csv") %>% dplyr::select(., -c(X, comments, DispX, DispY, optional)) %>% na.omit()
+tire_fulldat <- read.csv("TireData021920.csv") %>% dplyr::select(., -c(X, comments, DispX, DispY, optional)) %>% na.omit()
 dat.selected <- readRDS(file = "Mosquito_Variables_Selected.rds")
 splist <- unique(tire_fulldat$MosqSpp)
 
@@ -61,28 +61,28 @@ map + geom_point(data = loc, pch=21, stroke = 1, aes(x=long, y= lat))  +
 #Plot each species' counts by week 
 for(n in 1:length(splist)) {
   temp <- filter(tire_fulldat, MosqSpp == splist[n])
-  tiff(filename=paste0("./Figures/", temp$MosqSpp[1], "_CountByWeek.tiff"), width = 5, height = 4, units = "in", compression = "lzw", type = "cairo", res = 300)
+  #tiff(filename=paste0("./Figures/", temp$MosqSpp[1], "_CountByWeek.tiff"), width = 5, height = 4, units = "in", compression = "lzw", type = "cairo", res = 300)
   plot(temp$EpiWeek, temp$MosqPerL, ylim =c(0, max(tire_fulldat$MosqPerL)),
        pch=16, xlab = "Week", ylab = "Larvae Per Liter", main = temp$MosqSpp[1])
-  dev.off()
+  #dev.off()
 }
 rm(temp)
 
 #Determine the relative count of each species captured 
 #In total
 spp_totals <- tire_fulldat %>% group_by(MosqSpp) %>% summarise(total = sum(MosqCount))
-tiff(filename="./Figures/YearlyTotals.tiff", width = 10, height = 8, units = "in", compression = "lzw", type = "cairo", res = 300)
+#tiff(filename="./Figures/YearlyTotals.tiff", width = 10, height = 8, units = "in", compression = "lzw", type = "cairo", res = 300)
 barplot(total ~ fct_reorder(MosqSpp, total, .desc=TRUE), data = spp_totals, 
         ylim = c(0, 5000), ylab = "Mosquito Larvae", xlab = "", main = "Yearly Total")
-dev.off()
+#dev.off()
 
 #By week
-tiff(filename="./Figures/WeeklyTotals.tiff", width = 5, height = 4, units = "in", compression = "lzw", type = "cairo", res = 300)
+#tiff(filename="./Figures/WeeklyTotals.tiff", width = 5, height = 4, units = "in", compression = "lzw", type = "cairo", res = 300)
 ggplot(tire_fulldat %>% group_by(MosqSpp, EpiWeek) %>% summarise(total = sum(MosqPerL)), aes(x = EpiWeek, y = total, colour=MosqSpp)) + 
   geom_point(pch = 16, size = 2) + 
   labs(title = "Total by Week", x = "Week", y = "Larvae Per Liter", colour = "Species") +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"))
-dev.off()
+#dev.off()
 
 #Plot the relative mosquito counts per tire sample site
 for(i in 1:length(dat.selected)) {
@@ -103,16 +103,16 @@ for(i in 1:length(dat.selected)) {
 #Check the distribution of responses to determine link function for GLMM (if any)
 #All responses
 for(i in 1:length(dat.selected)) {
-  tiff(filename = paste0("./Figures/Response Distributions/", names(dat.selected)[i], "WithZeroes.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+  #tiff(filename = paste0("./Figures/Response Distributions/", names(dat.selected)[i], "WithZeroes.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
   plot(table(dat.selected[[i]]$MosqPerL), main=paste(names(dat.selected)[i], "All Responses"), xlab = "Mosquito Larvae Per Liter", ylab = "Times Occurring")
-  dev.off()
+  #dev.off()
 }
 #Zero-excluded
 for(i in 1:length(dat.selected)) {
   x = filter(dat.selected[[i]], MosqPerL != 0)
-  tiff(filename = paste0("./Figures/Response Distributions/", names(dat.selected)[i], "ZeroesExcluded.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+  #tiff(filename = paste0("./Figures/Response Distributions/", names(dat.selected)[i], "ZeroesExcluded.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
   plot(table(x$MosqPerL), main=paste(names(dat.selected)[i], "Zeroes Excluded"), xlab = "Mosquito Larvae Per Liter", ylab = "Times Occurring")
-  dev.off()  
+  #dev.off()  
 }
 
 #Determine the percentage of zero responses by species
@@ -133,7 +133,7 @@ covars <- c(names(dat.selected[[i]])[len-4],
                names(dat.selected[[i]])[len-2], 
                names(dat.selected[[i]])[len-1], 
                names(dat.selected[[i]])[len])
-tiff(filename = paste0("./Figures/Variable Plots/", names(dat.selected)[i], "VarScatterplot.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+#tiff(filename = paste0("./Figures/Variable Plots/", names(dat.selected)[i], "VarScatterplot.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
 MyMultipanel.ggp2(Z = dat.selected[[i]], 
                   varx = covars, 
                   vary = "MosqPerL", 
@@ -142,7 +142,7 @@ MyMultipanel.ggp2(Z = dat.selected[[i]],
                   addSmoother = FALSE,
                   addRegressionLine = FALSE,
                   addHorizontalLine = FALSE)
-dev.off()
+#dev.off()
 }
 #Define the nonspatial GLM model formulas
 nonspatial.formulas <- lapply(1:length(dat.selected), function(i) {
@@ -201,12 +201,12 @@ variograms <- lapply(1:length(dat.selected), function(i) {
 )
 
 for (i in 1:length(dat.selected)) {
-  tiff(filename = paste0("./Figures/Variograms/", names(dat.selected)[i], " Vario.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
+  #tiff(filename = paste0("./Figures/Variograms/", names(dat.selected)[i], " Vario.tiff"), width = 8, height = 6, units = "in", res = 300, compression = "lzw", type = "cairo")
   lo <- loess(variograms[[i]]$gamma ~ variograms[[i]]$dist)
   xl <- seq(min(variograms[[i]]$dist),max(variograms[[i]]$dist), (max(variograms[[i]]$dist) - min(variograms[[i]]$dist))/1000)
   plot(x = variograms[[i]]$dist, y = variograms[[i]]$gamma, main = names(dat.selected)[[i]], xlab = "Distance", ylab = "Semivariance")
   lines(xl, predict(lo, xl), lwd = 1.5, col = "blue")
-  dev.off()
+  #dev.off()
 }
 
 #Save environment for later loading by the modeling script
