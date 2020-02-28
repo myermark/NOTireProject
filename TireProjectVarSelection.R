@@ -108,3 +108,6 @@ for (n in 1:length(bvs.vars)) {
 names(dat.selected) = splist
 
 saveRDS(dat.selected, file = "Mosquito_Variables_Selected.rds")
+
+
+plot(filter(tire_fulldat, MosqSpp == 'Cx. quinq')$org_debris,filter(tire_fulldat, MosqSpp == 'Cx. quinq')$MosqCount )
